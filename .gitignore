@@ -1,1 +1,19 @@
-./vscode
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Project specific
+data/
+
+# Sub-project build artifacts (redundant if sub-gitignores exist, but good for safety)
+backend/target/
+frontend/node_modules/
+frontend/dist/
