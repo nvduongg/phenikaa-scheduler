@@ -84,12 +84,16 @@ const CohortManagement = () => {
             dataIndex: 'name',
             key: 'name',
             align: 'center',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="geekblue" style={{ fontSize: '14px', padding: '5px 10px' }}>{text}</Tag>
         },
         {
             title: 'Academic Period',
             key: 'period',
             align: 'center',
+            sorter: (a, b) => (a.startYear || 0) - (b.startYear || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (_, record) => (
                 <Text strong>
                     {record.startYear} - {record.endYear}

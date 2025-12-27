@@ -21,17 +21,14 @@ public class GeneticAlgorithm {
     @SuppressWarnings("unused")
     @Autowired private TimeTableValidator validator;
 
-    // CẤU HÌNH GA
-    private static final int POPULATION_SIZE = 50;   // Số lượng cá thể trong quần thể
-    private static final int GENERATIONS = 100;      // Số thế hệ chạy
-    private static final double MUTATION_RATE = 0.1; // Tỷ lệ đột biến (10%)
+    private static final int POPULATION_SIZE = 100; // Tăng lên chút để đa dạng
+    private static final int GENERATIONS = 200;     // Chạy lâu hơn để tìm phương án tốt
+    private static final double MUTATION_RATE = 0.15;
     private static final int TOURNAMENT_SIZE = 5;
 
-    // Class đại diện cho 1 Nhiễm sắc thể (Một phương án Thời khóa biểu trọn vẹn)
     @Data
     @AllArgsConstructor
     class Schedule {
-        // Map: OfferingID -> [Day, StartPeriod, RoomID]
         Map<Long, Gene> genes; 
         double fitness;
         boolean isFitnessChanged;
@@ -41,7 +38,6 @@ public class GeneticAlgorithm {
             this.isFitnessChanged = true;
         }
         
-        // Copy constructor
         public Schedule(Schedule other) {
             this.genes = new HashMap<>();
             for (Map.Entry<Long, Gene> entry : other.genes.entrySet()) {
@@ -62,7 +58,7 @@ public class GeneticAlgorithm {
         public Gene(Gene other) {
             this.day = other.day;
             this.startPeriod = other.startPeriod;
-            this.room = other.room; // Room là object reference, không cần deep copy vì Room tĩnh
+            this.room = other.room; 
         }
     }
 
@@ -72,39 +68,33 @@ public class GeneticAlgorithm {
 
         if (offerings.isEmpty()) return "No offerings to schedule.";
 
-        // 1. Khởi tạo quần thể ban đầu (Random)
         List<Schedule> population = initializePopulation(offerings, rooms);
+        Schedule bestSchedule = population.get(0);
 
-        // 2. Vòng lặp tiến hóa
         for (int generation = 0; generation < GENERATIONS; generation++) {
-            // Tính điểm cho toàn bộ quần thể
-            population.forEach(sch -> {
-                if (sch.isFitnessChanged) calculateFitness(sch, offerings, rooms);
+            // Parallel stream để tính điểm nhanh hơn
+            population.parallelStream().forEach(sch -> {
+                if (sch.isFitnessChanged) calculateFitness(sch, offerings);
             });
 
-            // Sắp xếp giảm dần theo Fitness (Điểm cao nhất ở đầu)
             population.sort((s1, s2) -> Double.compare(s2.fitness, s1.fitness));
+            
+            if (population.get(0).fitness > bestSchedule.fitness) {
+                bestSchedule = new Schedule(population.get(0));
+            }
 
-            // Log tiến độ
-            if (generation % 10 == 0) {
+            if (generation % 20 == 0) {
                 System.out.println("Gen " + generation + " | Best Fitness: " + population.get(0).fitness);
             }
             
-            // Nếu tìm thấy phương án hoàn hảo (Điểm = 0 hoặc chấp nhận được)
-            if (population.get(0).fitness >= -10) break; // -10 là ngưỡng chấp nhận lỗi nhỏ
+            if (population.get(0).fitness >= -10) break; 
 
-            // Lai ghép & Đột biến để tạo thế hệ mới
             population = evolvePopulation(population, offerings, rooms);
         }
 
-        // 3. Lưu kết quả tốt nhất
-        Schedule bestSchedule = population.get(0);
         saveSchedule(bestSchedule, offerings);
-
         return "GA Completed. Best Fitness: " + bestSchedule.fitness;
     }
-
-    // --- CÁC HÀM HỖ TRỢ GA ---
 
     private List<Schedule> initializePopulation(List<CourseOffering> offerings, List<Room> rooms) {
         List<Schedule> pop = new ArrayList<>();
@@ -118,97 +108,149 @@ public class GeneticAlgorithm {
         return pop;
     }
 
+    // --- LOGIC SINH GEN MỚI (QUAN TRỌNG NHẤT) ---
     private Gene randomGene(CourseOffering off, List<Room> rooms) {
-        // Random Day (2-7, CN hạn chế)
-        int day = 2 + (int)(Math.random() * 6); 
-        // Random Slot (1, 4, 7, 10, 13)
-        int[] slots = {1, 4, 7, 10, 13};
-        int start = slots[(int)(Math.random() * slots.length)];
+        // 1. Xác định loại môn để chọn Kíp học (Slot)
+        boolean isOnlineType = isOnlineCourse(off);
+
+        // Kíp chuẩn: 1, 4, 7, 10, 13
+        int[] validSlots;
+        if (isOnlineType) {
+            // ELN/Coursera: CHỈ học tối (Tiết 13)
+            validSlots = new int[]{13}; 
+        } else {
+            // Môn thường: Ưu tiên học ngày (1, 4, 7, 10). Hạn chế tối.
+            // Có thể thêm 13 nếu muốn môn thường học tối, nhưng ở đây ta làm chặt theo quy chế
+            validSlots = new int[]{1, 4, 7, 10}; 
+        }
         
-        // Random Room (Thông minh hơn: Chỉ random trong list phòng đúng loại)
+        int startPeriod = validSlots[(int)(Math.random() * validSlots.length)];
+        
+        // 2. Chọn ngày (Online học cả tuần kể cả CN, Offline hạn chế CN)
+        int day;
+        if (isOnlineType) {
+            day = 2 + (int)(Math.random() * 7); // Thứ 2 -> CN (2-8)
+        } else {
+            day = 2 + (int)(Math.random() * 6); // Thứ 2 -> T7 (2-7)
+        }
+
+        // 3. Chọn phòng (Lọc phòng đúng loại)
         String reqType = getRequiredRoomType(off);
         List<Room> validRooms = rooms.stream()
                 .filter(r -> r.getType().equalsIgnoreCase(reqType) && r.getCapacity() >= off.getPlannedSize())
                 .collect(Collectors.toList());
         
-        if (validRooms.isEmpty()) validRooms = rooms; // Fallback
+        // Fallback: Nếu không có phòng thỏa mãn, lấy tạm phòng bất kỳ đúng loại (dù thiếu chỗ) để GA tự phạt sau
+        if (validRooms.isEmpty()) {
+            validRooms = rooms.stream().filter(r -> r.getType().equalsIgnoreCase(reqType)).collect(Collectors.toList());
+        }
+        if (validRooms.isEmpty()) validRooms = rooms; // Fallback cuối cùng
+
         Room room = validRooms.get((int)(Math.random() * validRooms.size()));
 
-        return new Gene(day, start, room);
+        return new Gene(day, startPeriod, room);
     }
     
+    // Hàm helper kiểm tra môn Online/Coursera
+    private boolean isOnlineCourse(CourseOffering off) {
+        @SuppressWarnings("unused")
+        String code = off.getCourse().getCourseCode().toUpperCase();
+        String name = off.getCourse().getName().toUpperCase();
+        String type = off.getClassType() != null ? off.getClassType().toUpperCase() : "";
+
+        return type.equals("ELN") 
+            || type.equals("COURSERA") // Check thêm Coursera
+            || name.contains("COURSERA")
+            || name.contains("TRỰC TUYẾN")
+            || Boolean.TRUE.equals(off.getCourse().getIsOnline());
+    }
+
     private String getRequiredRoomType(CourseOffering off) {
-        String type = off.getClassType();
-        if ("TH".equals(type)) return "LAB";
-        if ("ELN".equals(type) || Boolean.TRUE.equals(off.getCourse().getIsOnline())) return "ONLINE";
+        if (isOnlineCourse(off)) return "ONLINE";
+        if ("TH".equalsIgnoreCase(off.getClassType())) return "LAB";
         return "THEORY";
     }
 
-    // --- HÀM TÍNH ĐIỂM (FITNESS FUNCTION) - QUAN TRỌNG NHẤT ---
-    private void calculateFitness(Schedule schedule, List<CourseOffering> allOfferings, List<Room> rooms) {
+    private void calculateFitness(Schedule schedule, List<CourseOffering> allOfferings) {
         double score = 0;
-        
-        // Map tạm để check trùng
-        // Key: "Day-Period-RoomID" -> Value: OfferingID
         Map<String, Long> roomOccupancy = new HashMap<>();
-        // Key: "Day-Period-LecturerID" -> Value: OfferingID
         Map<String, Long> lecturerOccupancy = new HashMap<>();
-        
-        // Duyệt qua từng gen để tính điểm
+        Map<String, Long> classOccupancy = new HashMap<>(); // Check trùng lớp biên chế
+
         for (CourseOffering off : allOfferings) {
             Gene gene = schedule.genes.get(off.getId());
+            
+            // Tính duration (làm tròn lên)
             int duration = (int)Math.ceil(off.getCourse().getCredits());
-            if (duration == 0) duration = 3;
+            // Quy chế: Thường là 3 tiết/ca. Nếu tín chỉ ít hơn vẫn chiếm slot đó?
+            // Ở đây ta dùng đúng tín chỉ, nhưng slot bắt đầu đã cố định 1,4,7,10
+            if (duration <= 0) duration = 3; 
 
-            // 1. Ràng buộc Cứng: Loại phòng & Sức chứa
-            if (!gene.room.getType().equalsIgnoreCase(getRequiredRoomType(off))) score -= 500;
+            // 1. Phạt nếu sai Slot quy định (Double check)
+            boolean isOnline = isOnlineCourse(off);
+            if (isOnline && gene.startPeriod != 13) score -= 1000; // Phạt nặng
+            if (!isOnline && gene.startPeriod == 13) score -= 200; // Phạt nhẹ hơn (Môn thường học tối không khuyến khích)
+            if (!Arrays.asList(1, 4, 7, 10, 13).contains(gene.startPeriod)) score -= 500; // Sai kíp
+
+            // 2. Phạt Sức chứa & Loại phòng
+            if (!gene.room.getType().equalsIgnoreCase(getRequiredRoomType(off))) score -= 1000;
             if (gene.room.getCapacity() < off.getPlannedSize()) score -= 500;
 
-            // 2. Ràng buộc Cứng: Trùng lặp
+            // 3. Check Trùng lặp
             for (int t = 0; t < duration; t++) {
                 int period = gene.startPeriod + t;
                 
-                // Check trùng Phòng
-                String roomKey = gene.day + "-" + period + "-" + gene.room.getId();
-                if (roomOccupancy.containsKey(roomKey)) score -= 1000; // Phạt cực nặng
-                else roomOccupancy.put(roomKey, off.getId());
+                // Trùng Phòng
+                if (!gene.room.getType().equalsIgnoreCase("ONLINE")) {
+                    String roomKey = gene.day + "-" + period + "-" + gene.room.getId();
+                    if (roomOccupancy.containsKey(roomKey)) score -= 1000;
+                    else roomOccupancy.put(roomKey, off.getId());
+                }
 
-                // Check trùng Giảng viên
+                // Trùng GV
                 if (off.getLecturer() != null) {
                     String lecKey = gene.day + "-" + period + "-" + off.getLecturer().getId();
                     if (lecturerOccupancy.containsKey(lecKey)) score -= 1000;
                     else lecturerOccupancy.put(lecKey, off.getId());
                 }
+
+                // Trùng Lớp biên chế (Sinh viên)
+                if (off.getTargetClasses() != null && !off.getTargetClasses().isEmpty()) {
+                     // Tách chuỗi lớp: "K16-CNTT1;K16-CNTT2"
+                     String[] classes = off.getTargetClasses().split(";");
+                     for (String cls : classes) {
+                         String classKey = gene.day + "-" + period + "-" + cls.trim();
+                         if (classOccupancy.containsKey(classKey)) score -= 500;
+                         else classOccupancy.put(classKey, off.getId());
+                     }
+                }
             }
             
-            // 3. Ràng buộc Cứng: Cha - Con (Parent - Child)
+            // 4. Ràng buộc Cha - Con (Parent-Child)
             if (off.getParent() != null) {
                 Gene parentGene = schedule.genes.get(off.getParent().getId());
                 if (parentGene != null && parentGene.day == gene.day) {
-                    // Check overlap time
-                    int parentEnd = parentGene.startPeriod + (int)Math.ceil(off.getParent().getCourse().getCredits()) - 1;
+                    // Check overlap
+                    int parentDuration = (int)Math.ceil(off.getParent().getCourse().getCredits());
+                    int parentEnd = parentGene.startPeriod + parentDuration - 1;
                     int childEnd = gene.startPeriod + duration - 1;
                     
                     if (gene.startPeriod <= parentEnd && childEnd >= parentGene.startPeriod) {
-                        score -= 1000; // Con trùng giờ Cha
+                        score -= 2000; // Con trùng giờ Cha -> Không thể chấp nhận
                     }
                 }
             }
         }
-        
-        // Update Fitness
         schedule.fitness = score;
         schedule.isFitnessChanged = false;
     }
 
     private List<Schedule> evolvePopulation(List<Schedule> pop, List<CourseOffering> offerings, List<Room> rooms) {
         List<Schedule> newPop = new ArrayList<>();
-
-        // Giữ lại top 10% ưu tú nhất (Elitism)
+        // Giữ top 10%
         int eliteCount = (int)(POPULATION_SIZE * 0.1);
         for (int i = 0; i < eliteCount; i++) newPop.add(new Schedule(pop.get(i)));
 
-        // Lai ghép để tạo phần còn lại
         while (newPop.size() < POPULATION_SIZE) {
             Schedule p1 = tournamentSelection(pop);
             Schedule p2 = tournamentSelection(pop);
@@ -222,21 +264,18 @@ public class GeneticAlgorithm {
     private Schedule tournamentSelection(List<Schedule> pop) {
         Schedule best = null;
         for (int i = 0; i < TOURNAMENT_SIZE; i++) {
-            Schedule randomInd = pop.get((int)(Math.random() * pop.size()));
-            if (best == null || randomInd.fitness > best.fitness) best = randomInd;
+            Schedule ind = pop.get((int)(Math.random() * pop.size()));
+            if (best == null || ind.fitness > best.fitness) best = ind;
         }
         return best;
     }
 
     private Schedule crossover(Schedule p1, Schedule p2, List<CourseOffering> offerings) {
         Schedule child = new Schedule();
-        // Uniform Crossover: Với mỗi môn, tung đồng xu chọn gen từ Cha hoặc Mẹ
         for (CourseOffering off : offerings) {
-            if (Math.random() < 0.5) {
-                child.genes.put(off.getId(), new Gene(p1.genes.get(off.getId())));
-            } else {
-                child.genes.put(off.getId(), new Gene(p2.genes.get(off.getId())));
-            }
+            // Uniform Crossover
+            child.genes.put(off.getId(), Math.random() < 0.5 ? 
+                new Gene(p1.genes.get(off.getId())) : new Gene(p2.genes.get(off.getId())));
         }
         return child;
     }
@@ -244,7 +283,7 @@ public class GeneticAlgorithm {
     private void mutate(Schedule child, List<CourseOffering> offerings, List<Room> rooms) {
         for (CourseOffering off : offerings) {
             if (Math.random() < MUTATION_RATE) {
-                // Đột biến: Random lại thời gian/phòng cho môn này
+                // Đột biến: Random lại theo đúng quy tắc Kíp học
                 child.genes.put(off.getId(), randomGene(off, rooms));
             }
         }
@@ -259,14 +298,12 @@ public class GeneticAlgorithm {
             off.setStartPeriod(gene.startPeriod);
             
             int duration = (int)Math.ceil(off.getCourse().getCredits());
-            if (duration == 0) duration = 3;
+            if (duration <= 0) duration = 3;
             off.setEndPeriod(gene.startPeriod + duration - 1);
             
             off.setRoom(gene.room);
-            off.setStatus("SCHEDULED");
-            if (best.fitness < -500) off.setStatusMessage("GA Result with Penalty: " + best.fitness);
-            else off.setStatusMessage("GA Optimized");
-            
+            off.setStatus(best.fitness >= -100 ? "SCHEDULED" : "ERROR");
+            off.setStatusMessage("GA Fitness: " + best.fitness);
             toSave.add(off);
         }
         offeringRepo.saveAll(toSave);

@@ -59,6 +59,98 @@ public class CourseOfferingService {
         return new ArrayList<>();
     }
 
+    @SuppressWarnings("null")
+    public java.util.Optional<CourseOffering> getOfferingById(Long id) {
+        return offeringRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public CourseOffering createOffering(CourseOffering offering) {
+        if (offering.getCourse() == null) {
+            throw new RuntimeException("Course is required for CourseOffering");
+        }
+
+        // Resolve Course by id or courseCode
+        if (offering.getCourse().getId() != null) {
+            courseRepo.findById(offering.getCourse().getId()).ifPresent(offering::setCourse);
+        } else if (offering.getCourse().getCourseCode() != null) {
+            courseRepo.findByCourseCode(offering.getCourse().getCourseCode()).ifPresent(offering::setCourse);
+        }
+
+        // Resolve Semester: if not provided, use current active semester (if any)
+        if (offering.getSemester() == null || offering.getSemester().getId() == null) {
+            semesterRepo.findByIsCurrentTrue().ifPresent(offering::setSemester);
+        } else {
+            semesterRepo.findById(offering.getSemester().getId()).ifPresent(offering::setSemester);
+        }
+
+        // Resolve Parent offering if provided (by id or code)
+        if (offering.getParent() != null) {
+            if (offering.getParent().getId() != null) {
+                offeringRepo.findById(offering.getParent().getId()).ifPresent(offering::setParent);
+            } else if (offering.getParent().getCode() != null) {
+                offeringRepo.findByCode(offering.getParent().getCode()).ifPresent(offering::setParent);
+            }
+        }
+
+        if (offering.getClassType() == null || offering.getClassType().isEmpty()) {
+            offering.setClassType("ALL");
+        }
+
+        if (offering.getStatus() == null || offering.getStatus().isEmpty()) {
+            offering.setStatus("PLANNED");
+        }
+
+        return offeringRepo.save(offering);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<CourseOffering> updateOffering(Long id, CourseOffering updated) {
+        return offeringRepo.findById(id).map(existing -> {
+            existing.setCode(updated.getCode());
+            existing.setPlannedSize(updated.getPlannedSize());
+            existing.setTargetClasses(updated.getTargetClasses());
+
+            if (updated.getClassType() != null && !updated.getClassType().isEmpty()) {
+                existing.setClassType(updated.getClassType());
+            }
+
+            // Course resolution similar to create
+            if (updated.getCourse() != null) {
+                if (updated.getCourse().getId() != null) {
+                    courseRepo.findById(updated.getCourse().getId()).ifPresent(existing::setCourse);
+                } else if (updated.getCourse().getCourseCode() != null) {
+                    courseRepo.findByCourseCode(updated.getCourse().getCourseCode()).ifPresent(existing::setCourse);
+                }
+            }
+
+            // Semester update (optional)
+            if (updated.getSemester() != null && updated.getSemester().getId() != null) {
+                semesterRepo.findById(updated.getSemester().getId()).ifPresent(existing::setSemester);
+            }
+
+            // Parent update (optional)
+            if (updated.getParent() != null) {
+                if (updated.getParent().getId() != null) {
+                    offeringRepo.findById(updated.getParent().getId()).ifPresent(existing::setParent);
+                } else if (updated.getParent().getCode() != null) {
+                    offeringRepo.findByCode(updated.getParent().getCode()).ifPresent(existing::setParent);
+                }
+            }
+
+            return offeringRepo.save(existing);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteOffering(Long id) {
+        if (offeringRepo.existsById(id)) {
+            offeringRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public CourseOffering assignLecturer(Long offeringId, Long lecturerId) {
         @SuppressWarnings("null")
         CourseOffering offering = offeringRepo.findById(offeringId)

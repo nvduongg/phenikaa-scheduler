@@ -56,12 +56,16 @@ const SemesterManagement = () => {
             title: 'Semester Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Academic Year',
             dataIndex: 'academicYear',
             key: 'year',
+            sorter: (a, b) => (a.academicYear || '').localeCompare(b.academicYear || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="blue">{text}</Tag>
         },
         {

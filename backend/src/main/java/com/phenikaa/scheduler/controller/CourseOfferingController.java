@@ -36,6 +36,34 @@ public class CourseOfferingController {
         return ResponseEntity.ok(offeringService.getAllOfferings());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<CourseOffering> getOfferingById(@PathVariable Long id) {
+        return offeringService.getOfferingById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<CourseOffering> createOffering(@RequestBody CourseOffering offering) {
+        CourseOffering created = offeringService.createOffering(offering);
+        return ResponseEntity.ok(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CourseOffering> updateOffering(@PathVariable Long id, @RequestBody CourseOffering offering) {
+        return offeringService.updateOffering(id, offering)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOffering(@PathVariable Long id) {
+        if (offeringService.deleteOffering(id)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PutMapping("/{id}/lecturer")
     public ResponseEntity<CourseOffering> assignLecturer(@PathVariable Long id, @RequestParam(required = false) Long lecturerId) {
         return ResponseEntity.ok(offeringService.assignLecturer(id, lecturerId));
@@ -142,11 +170,11 @@ public class CourseOfferingController {
         return ResponseEntity.ok(result);
     }
 
-    // API Trigger Scheduling
+    // API Trigger Scheduling (Always uses Genetic Algorithm)
     @PostMapping("/generate-schedule")
-    public ResponseEntity<String> generateSchedule(@RequestParam(defaultValue = "GA") String algorithm) {
+    public ResponseEntity<String> generateSchedule() {
         long startTime = System.currentTimeMillis();
-        String result = schedulerService.generateSchedule(algorithm);
+        String result = schedulerService.generateSchedule(null);
         long duration = System.currentTimeMillis() - startTime;
         return ResponseEntity.ok(result + " (Time: " + duration + "ms)");
     }

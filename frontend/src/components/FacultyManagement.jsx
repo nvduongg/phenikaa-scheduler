@@ -75,18 +75,24 @@ const FacultyManagement = () => {
             dataIndex: 'code',
             key: 'code',
             width: 150,
+            sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="blue">{text}</Tag>
         },
         {
             title: 'Faculty Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Affiliated School',
             dataIndex: ['school', 'name'],
             key: 'school',
+            sorter: (a, b) => (a.school?.name || '').localeCompare(b.school?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => text ? <Tag color="purple">{text}</Tag> : <Text type="secondary">Phenikaa University (Direct)</Text>
         }
         ,{

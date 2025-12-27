@@ -26,17 +26,42 @@ public class TimeTableValidator {
             return false;
         }
 
-        // 3. KIỂM TRA LOẠI PHÒNG (Strict Check)
+        // 3. CHECK LOẠI PHÒNG & KÍP HỌC THEO QUY CHẾ
         String type = offering.getClassType(); // LT, TH, ELN, ALL
         if (type == null) type = "ALL";
+        type = type.toUpperCase();
 
-        // Logic check loại phòng
-        if ("TH".equals(type) && !room.getType().equalsIgnoreCase("LAB")) return false; // TH bắt buộc vào Lab
-        if ("LT".equals(type) && room.getType().equalsIgnoreCase("LAB")) return false;  // LT không được vào Lab (để dành chỗ)
-        if ("ELN".equals(type) && !room.getType().equalsIgnoreCase("ONLINE")) return false; // Online bắt buộc vào phòng ảo
-        
-        // Nếu phòng là ONLINE nhưng lớp không phải ELN -> Sai
-        if (room.getType().equalsIgnoreCase("ONLINE") && !"ELN".equals(type) && !Boolean.TRUE.equals(offering.getCourse().getIsOnline())) return false;
+        boolean isOnline = isOnlineCourse(offering);
+
+        // 3a. Kíp học chuẩn: chỉ cho phép bắt đầu tại 1,4,7,10,13
+        if (startPeriod != 1 && startPeriod != 4 && startPeriod != 7 && startPeriod != 10 && startPeriod != 13) {
+            return false;
+        }
+
+        // 3b. ELN/Coursera bắt buộc phòng ONLINE
+        if (isOnline && !room.getType().equalsIgnoreCase("ONLINE")) {
+            return false;
+        }
+
+        // 3c. Môn thường không được vào phòng ONLINE
+        if (!isOnline && room.getType().equalsIgnoreCase("ONLINE")) {
+            return false;
+        }
+
+        // 3d. Ràng buộc chi tiết theo loại lớp
+        // TH: bắt buộc Lab
+        if ("TH".equals(type) && !room.getType().equalsIgnoreCase("LAB")) {
+            return false;
+        }
+        // LT: không chiếm Lab (để dành cho TH)
+        if ("LT".equals(type) && room.getType().equalsIgnoreCase("LAB")) {
+            return false;
+        }
+
+        // 3e. ELN/Coursera nên bắt đầu tiết 13 (hard-constraint)
+        if (isOnline && startPeriod != 13) {
+            return false;
+        }
 
 
         // 4. KIỂM TRA TRÙNG LỊCH (Time Overlap)
@@ -79,6 +104,20 @@ public class TimeTableValidator {
 
         return true; 
     }
+
+        // Hàm helper xác định môn Online/Coursera (đồng bộ với GeneticAlgorithm)
+        private boolean isOnlineCourse(CourseOffering offering) {
+        String type = offering.getClassType() != null ? offering.getClassType().toUpperCase() : "";
+        String name = offering.getCourse().getName() != null
+            ? offering.getCourse().getName().toUpperCase()
+            : "";
+
+        return "ELN".equals(type)
+            || "COURSERA".equals(type)
+            || name.contains("COURSERA")
+            || name.contains("TRỰC TUYẾN")
+            || Boolean.TRUE.equals(offering.getCourse().getIsOnline());
+        }
 
     // Helper tính thời lượng
     private int calculateDuration(CourseOffering offering) {

@@ -71,6 +71,8 @@ const RoomManagement = () => {
             dataIndex: 'name',
             key: 'name',
             align: 'center',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong style={{ fontSize: '16px' }}>{text}</Text>
         },
         {
@@ -78,6 +80,8 @@ const RoomManagement = () => {
             dataIndex: 'capacity',
             key: 'capacity',
             align: 'center',
+            sorter: (a, b) => (a.capacity || 0) - (b.capacity || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (cap) => <Tag color="geekblue" style={{ fontSize: '14px' }}>{cap}</Tag>
         },
         {
@@ -85,6 +89,8 @@ const RoomManagement = () => {
             dataIndex: 'type',
             key: 'type',
             align: 'center',
+            sorter: (a, b) => (a.type || '').localeCompare(b.type || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (type) => {
                 let color = 'default';
                 let icon = <ReadOutlined />;

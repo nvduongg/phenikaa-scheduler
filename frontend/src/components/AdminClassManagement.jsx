@@ -74,12 +74,16 @@ const AdminClassManagement = () => {
             title: 'Class Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Major',
             dataIndex: ['major', 'name'],
             key: 'major',
+            sorter: (a, b) => (a.major?.name || '').localeCompare(b.major?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
@@ -88,6 +92,8 @@ const AdminClassManagement = () => {
             key: 'cohort',
             align: 'center',
             width: 100,
+            sorter: (a, b) => (a.cohort?.name || '').localeCompare(b.cohort?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="orange">{text}</Tag>
         },
         {
@@ -96,6 +102,8 @@ const AdminClassManagement = () => {
             key: 'size',
             align: 'center',
             width: 100,
+            sorter: (a, b) => (a.size || 0) - (b.size || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (size) => <Tag color="default">{size}</Tag>
         }
         ,{

@@ -64,12 +64,16 @@ const SchoolManagement = () => {
             dataIndex: 'code',
             key: 'code',
             width: 150,
+            sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
             title: 'School Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong style={{ fontSize: '15px' }}>{text}</Text>
         }
         ,{

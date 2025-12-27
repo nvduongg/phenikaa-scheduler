@@ -6,7 +6,8 @@ import {
     CalendarOutlined, 
     UserOutlined, 
     LogoutOutlined,
-    SettingOutlined
+    SettingOutlined,
+    PieChartOutlined
 } from '@ant-design/icons';
 
 import logo from './assets/Logo.png';
@@ -24,10 +25,10 @@ import RoadmapManagement from './components/RoadmapManagement';
 import LecturerManagement from './components/LecturerManagement';
 import ExpertiseManagement from './components/ExpertiseManagement';
 import RoomManagement from './components/RoomManagement';
-import TimetableView from './components/TimetableView';
+import TimetableManagement from './components/TimetableManagement';
 import SemesterManagement from './components/SemesterManagement';
 import LoginPage from './pages/LoginPage';
-
+import WorkloadStatistics from './components/WorkloadStatistics';
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
 
@@ -75,7 +76,7 @@ const allMenuItems = [
     },
     {
         key: '4',
-        label: 'Timetable View',
+        label: 'Timetable Management',
         icon: <CalendarOutlined />,
         roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'],
     },
@@ -86,6 +87,15 @@ const allMenuItems = [
       roles: ['ADMIN'], // Chỉ Super Admin
       children: [
           { key: '99', label: 'Semester Settings' },
+      ],
+   },
+   {
+      key: 'grp_stat',
+      label: 'Reports & Statistics',
+      icon: <PieChartOutlined />, // Import icon này từ antd
+      roles: ['ADMIN', 'ADMIN_SCHOOL'], // Chỉ Admin Trường/ĐH mới xem được
+      children: [
+          { key: '20', label: 'Lecturer Workload' },
       ],
    },
 ];
@@ -195,7 +205,9 @@ const App = () => {
             case '3': return <OfferingManagement user={user} />; 
 
             case '99': return <SemesterManagement />;
-            case '4': return <TimetableView />;
+            case '4': return <TimetableManagement />;
+
+            case '20': return <WorkloadStatistics />;
             default: return <div>Select a menu item</div>;
         }
     };

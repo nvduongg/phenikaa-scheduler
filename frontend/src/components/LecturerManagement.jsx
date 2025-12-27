@@ -85,12 +85,16 @@ const LecturerManagement = () => {
             dataIndex: 'lecturerCode',
             key: 'code',
             width: 100,
+            sorter: (a, b) => (a.lecturerCode || '').localeCompare(b.lecturerCode || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Full Name',
             dataIndex: 'fullName',
             key: 'name',
+            sorter: (a, b) => (a.fullName || '').localeCompare(b.fullName || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => (
                 <Text>{text}</Text>
             )
@@ -99,12 +103,16 @@ const LecturerManagement = () => {
             title: 'Email',
             dataIndex: 'email',
             key: 'email',
+            sorter: (a, b) => (a.email || '').localeCompare(b.email || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text copyable>{text}</Text>
         },
         {
             title: 'Faculty',
             dataIndex: ['faculty', 'name'],
             key: 'faculty',
+            sorter: (a, b) => (a.faculty?.name || '').localeCompare(b.faculty?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="purple">{text}</Tag>
         },
         {

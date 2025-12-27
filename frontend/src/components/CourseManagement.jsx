@@ -34,11 +34,11 @@ const CourseManagement = () => {
     }, []);
 
     const fetchFaculties = async () => {
-        try { const res = await axiosClient.get('/faculties'); setFaculties(res.data); } catch {}
+        try { const res = await axiosClient.get('/faculties'); setFaculties(res.data); } catch { /* empty */ }
     };
 
     const fetchSchools = async () => {
-        try { const res = await axiosClient.get('/schools'); setSchools(res.data); } catch {}
+        try { const res = await axiosClient.get('/schools'); setSchools(res.data); } catch { /* empty */ }
     };
 
     const uploadProps = {
@@ -76,18 +76,24 @@ const CourseManagement = () => {
             title: 'Course Code',
             dataIndex: 'courseCode',
             key: 'courseCode',
-            width: 130,
+            width: 150,
+            sorter: (a, b) => (a.courseCode || '').localeCompare(b.courseCode || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Course Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>
         },
         {
             title: 'Credits',
             key: 'credits',
+            sorter: (a, b) => (a.credits || 0) - (b.credits || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (_, record) => (
                 <Space>
                     <Tag color="blue">{record.credits} Credits</Tag>
@@ -100,6 +106,8 @@ const CourseManagement = () => {
         {
             title: 'Managing Unit',
             key: 'managingUnit',
+            sorter: (a, b) => ((a.managingFaculty?.name || a.school?.name) || '').localeCompare((b.managingFaculty?.name || b.school?.name) || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (_, record) => {
                 if (record.managingFaculty) return <Tag color="cyan">{record.managingFaculty.name}</Tag>;
                 if (record.school) return <Tag color="purple">{record.school.name}</Tag>;

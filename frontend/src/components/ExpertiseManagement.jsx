@@ -111,6 +111,8 @@ const ExpertiseManagement = () => {
             title: 'Lecturer',
             key: 'lecturer',
             width: 250,
+            sorter: (a, b) => (a.fullName || '').localeCompare(b.fullName || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (record) => (
                 <Space>
                     <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
@@ -126,12 +128,16 @@ const ExpertiseManagement = () => {
             dataIndex: ['faculty', 'name'],
             key: 'faculty',
             width: 150,
+            sorter: (a, b) => (a.faculty?.name || '').localeCompare(b.faculty?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="purple">{text}</Tag>
         },
         {
             title: 'Teaching Capabilities',
             dataIndex: 'teachingCourses',
             key: 'courses',
+            sorter: (a, b) => ( (a.teachingCourses?.length || 0) - (b.teachingCourses?.length || 0) ),
+            sortDirections: ['ascend', 'descend'],
             render: (courses) => (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {courses && courses.map(course => (

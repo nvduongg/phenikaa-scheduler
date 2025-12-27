@@ -113,12 +113,16 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             title: 'Course Code',
             dataIndex: ['course', 'courseCode'],
             key: 'code',
+            sorter: (a, b) => ((a.course?.courseCode || '')).localeCompare(b.course?.courseCode || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text code>{text}</Text>
         },
         {
             title: 'Course Name',
             dataIndex: ['course', 'name'],
             key: 'courseName',
+            sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
@@ -126,6 +130,8 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             dataIndex: ['course', 'credits'],
             key: 'credits',
             align: 'center',
+            sorter: (a, b) => (a.course?.credits || 0) - (b.course?.credits || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (cr) => <Tag color="default">{cr} TC</Tag>
         }
     ];

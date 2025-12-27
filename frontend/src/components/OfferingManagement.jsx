@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Button, Table, message, Card, Typography, Space, Tag, Tooltip, Modal, Select } from 'antd';
-import { UploadOutlined, DownloadOutlined, ReloadOutlined, ClockCircleOutlined, EnvironmentOutlined, UserSwitchOutlined, NodeIndexOutlined, EditOutlined } from '@ant-design/icons';
+import { Upload, Button, Table, message, Card, Typography, Space, Tag, Tooltip, Modal, Select, Form, Input, Popconfirm } from 'antd';
+import { UploadOutlined, DownloadOutlined, ReloadOutlined, UserSwitchOutlined, NodeIndexOutlined, EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
 
 const { Title, Text } = Typography;
@@ -8,6 +8,14 @@ const { Title, Text } = Typography;
 const OfferingManagement = ({ user }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [adminClasses, setAdminClasses] = useState([]);
+    const [parentOptions, setParentOptions] = useState([]);
+
+    // CRUD modal state
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingOffering, setEditingOffering] = useState(null);
+    const [form] = Form.useForm();
     
     // Assign Lecturer State
     const [lecturers, setLecturers] = useState([]);
@@ -38,9 +46,29 @@ const OfferingManagement = ({ user }) => {
         }
     };
 
+    const fetchCourses = async () => {
+        try {
+            const res = await axiosClient.get('/courses');
+            setCourses(res.data);
+        } catch (error) {
+            console.error('Failed to fetch courses', error);
+        }
+    };
+
+    const fetchAdminClasses = async () => {
+        try {
+            const res = await axiosClient.get('/admin-classes');
+            setAdminClasses(res.data);
+        } catch (error) {
+            console.error('Failed to fetch admin classes', error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         fetchLecturers();
+        fetchCourses();
+        fetchAdminClasses();
     }, []);
 
     const uploadProps = {
@@ -105,12 +133,95 @@ const OfferingManagement = ({ user }) => {
         }
     };
 
+    const openCreateModal = () => {
+        setEditingOffering(null);
+        form.resetFields();
+        setParentOptions([]);
+        setEditModalVisible(true);
+    };
+
+    const openEditModal = (record) => {
+        setEditingOffering(record);
+        const targetCodes = (record.targetClasses || '')
+            .split(';')
+            .map(s => s.trim())
+            .filter(Boolean);
+        form.setFieldsValue({
+            code: record.code,
+            courseId: record.course?.id,
+            plannedSize: record.plannedSize,
+            targetClasses: targetCodes,
+            classType: record.classType || 'ALL',
+            parentCode: record.parent?.code,
+        });
+        // Build parent options: same course, LT/ALL/ELN, exclude current
+        const opts = data
+            .filter(off =>
+                off.course &&
+                record.course &&
+                off.course.id === record.course.id &&
+                ['LT', 'ALL', 'ELN'].includes((off.classType || 'ALL').toUpperCase()) &&
+                off.id !== record.id
+            )
+            .map(off => ({
+                value: off.code,
+                label: `${off.code}${off.targetClasses ? ` - ${off.targetClasses}` : ''}`,
+            }));
+        setParentOptions(opts);
+        setEditModalVisible(true);
+    };
+
+    const handleSaveOffering = async () => {
+        try {
+            const values = await form.validateFields();
+            const payload = {
+                code: values.code,
+                plannedSize: values.plannedSize,
+                targetClasses: Array.isArray(values.targetClasses)
+                    ? values.targetClasses.join(';')
+                    : (values.targetClasses || ''),
+                classType: values.classType,
+                course: { id: values.courseId },
+            };
+
+            if (values.parentCode) {
+                payload.parent = { code: values.parentCode };
+            }
+
+            if (editingOffering) {
+                await axiosClient.put(`/offerings/${editingOffering.id}`, payload);
+                message.success('Updated offering successfully');
+            } else {
+                await axiosClient.post('/offerings', payload);
+                message.success('Created offering successfully');
+            }
+
+            setEditModalVisible(false);
+            fetchData();
+        } catch (error) {
+            if (error?.errorFields) return; // validation error
+            message.error('Failed to save offering');
+        }
+    };
+
+    const handleDeleteOffering = async (record) => {
+        try {
+            await axiosClient.delete(`/offerings/${record.id}`);
+            message.success('Deleted offering');
+            fetchData();
+        } catch {
+            message.error('Failed to delete offering');
+        }
+    };
+
     const columns = [
         {
             title: 'Class Code',
             dataIndex: 'code',
             key: 'code',
             width: 230,
+            sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong copyable>{text}</Text>,
         },
         // --- CỘT MỚI: TYPE & PARENT ---
@@ -119,6 +230,8 @@ const OfferingManagement = ({ user }) => {
             key: 'type',
             width: 150,
             align: 'center',
+            sorter: (a, b) => ((a.classType || '')).localeCompare(b.classType || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (_, record) => {
                 let color = 'default';
                 let typeText = record.classType || 'ALL';
@@ -148,6 +261,8 @@ const OfferingManagement = ({ user }) => {
             title: 'Course',
             dataIndex: 'course',
             key: 'course',
+            sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (course) => (
                 <div>
                     <div style={{ fontWeight: 500 }}>{course.name}</div>
@@ -161,12 +276,16 @@ const OfferingManagement = ({ user }) => {
             key: 'plannedSize',
             align: 'center',
             width: 80,
+            sorter: (a, b) => (a.plannedSize || 0) - (b.plannedSize || 0),
+            sortDirections: ['ascend', 'descend'],
             render: (size) => <Tag color="volcano">{size}</Tag>
         },
         {
             title: 'Assigned Lecturer',
             dataIndex: 'lecturer',
             key: 'lecturer',
+            sorter: (a, b) => ((a.lecturer?.fullName || '')).localeCompare(b.lecturer?.fullName || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (lecturer, record) => {
                 // Logic check quyền
                 const myFacultyId = user?.facultyId;
@@ -198,26 +317,23 @@ const OfferingManagement = ({ user }) => {
             }
         },
         {
-            title: 'Schedule (Output)',
-            key: 'schedule',
-            render: (_, record) => {
-                if (record.status === 'PLANNED') {
-                    return <Tag icon={<ClockCircleOutlined />} color="default">Pending Schedule</Tag>;
-                }
-                if (record.status === 'ERROR') {
-                    return <Tag color="red">Conflict Error</Tag>;
-                }
-                return (
-                    <Space direction="vertical" size={0}>
-                        <Tag icon={<ClockCircleOutlined />} color="green">
-                            {record.dayOfWeek === 8 ? 'Sun' : `Mon ${record.dayOfWeek}`}, Per {record.startPeriod}-{record.endPeriod}
-                        </Tag>
-                        <Tag icon={<EnvironmentOutlined />} color="geekblue">
-                            {record.room ? record.room.name : 'No Room'}
-                        </Tag>
-                    </Space>
-                );
-            }
+            title: 'Actions',
+            key: 'actions',
+            width: 160,
+            render: (_, record) => (
+                <Space>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
+                        Edit
+                    </Button>
+                    <Popconfirm
+                        title="Delete offering"
+                        description={`Are you sure to delete ${record.code}?`}
+                        onConfirm={() => handleDeleteOffering(record)}
+                    >
+                        <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+                    </Popconfirm>
+                </Space>
+            )
         }
     ];
 
@@ -229,6 +345,13 @@ const OfferingManagement = ({ user }) => {
                     <Text type="secondary">Input Demand for Timetabling</Text>
                 </div>
                 <Space>
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={openCreateModal}
+                    >
+                        New Offering
+                    </Button>
                     <Button 
                         type="primary" 
                         danger // Đổi màu đỏ cho nổi bật
@@ -284,6 +407,126 @@ const OfferingManagement = ({ user }) => {
                         </Select.Option>
                     ))}
                 </Select>
+            </Modal>
+
+            <Modal
+                title={editingOffering ? `Edit Offering: ${editingOffering.code}` : 'New Offering'}
+                open={editModalVisible}
+                onOk={handleSaveOffering}
+                onCancel={() => setEditModalVisible(false)}
+                destroyOnClose
+            >
+                <Form form={form} layout="vertical">
+                    <Form.Item
+                        label="Class Code"
+                        name="code"
+                        rules={[{ required: true, message: 'Please input class code' }]}
+                    >
+                        <Input placeholder="2025_JAVA_01" />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Course"
+                        name="courseId"
+                        rules={[{ required: true, message: 'Please select course' }]}
+                    >
+                        <Select
+                            showSearch
+                            placeholder="Select course"
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                            onChange={(val) => {
+                                // When course changes, rebuild parent options for that course
+                                const opts = data
+                                    .filter(off =>
+                                        off.course &&
+                                        off.course.id === val &&
+                                        ['LT', 'ALL', 'ELN'].includes((off.classType || 'ALL').toUpperCase()) &&
+                                        (!editingOffering || off.id !== editingOffering.id)
+                                    )
+                                    .map(off => ({
+                                        value: off.code,
+                                        label: `${off.code}${off.targetClasses ? ` - ${off.targetClasses}` : ''}`,
+                                    }));
+                                setParentOptions(opts);
+                                // Reset parent selection when course changes
+                                form.setFieldsValue({ parentCode: undefined });
+                            }}
+                        >
+                            {courses.map(c => (
+                                <Select.Option key={c.id} value={c.id}>
+                                    {c.courseCode} - {c.name}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Planned Size"
+                        name="plannedSize"
+                        rules={[{ required: true, message: 'Please input planned size' }]}
+                    >
+                        <Input type="number" min={1} placeholder="60" />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Target Classes"
+                        name="targetClasses"
+                    >
+                        <Select
+                            mode="multiple"
+                            allowClear
+                            placeholder="Select target admin classes"
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        >
+                            {adminClasses.map(cls => (
+                                <Select.Option key={cls.id} value={cls.name}>
+                                    {cls.name} {cls.code ? `(${cls.code})` : ''}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Class Type"
+                        name="classType"
+                        initialValue="ALL"
+                    >
+                        <Select>
+                            <Select.Option value="ALL">ALL</Select.Option>
+                            <Select.Option value="LT">LT</Select.Option>
+                            <Select.Option value="TH">TH</Select.Option>
+                            <Select.Option value="ELN">ELN</Select.Option>
+                        </Select>
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Parent Class Code (for TH)"
+                        name="parentCode"
+                    >
+                        <Select
+                            allowClear
+                            placeholder="Select parent LT/ALL/ELN class"
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        >
+                            {parentOptions.map(opt => (
+                                <Select.Option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                </Form>
             </Modal>
         </Space>
     );

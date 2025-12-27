@@ -74,18 +74,24 @@ const MajorManagement = () => {
             dataIndex: 'code',
             key: 'code',
             width: 150,
+            sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
             title: 'Major Name',
             dataIndex: 'name',
             key: 'name',
+            sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Text strong>{text}</Text>
         },
         {
             title: 'Managing Faculty',
             dataIndex: ['faculty', 'name'], // Nested object access
             key: 'faculty',
+            sorter: (a, b) => (a.faculty?.name || '').localeCompare(b.faculty?.name || ''),
+            sortDirections: ['ascend', 'descend'],
             render: (text) => <Tag color="purple">{text}</Tag>
         }
         ,{
