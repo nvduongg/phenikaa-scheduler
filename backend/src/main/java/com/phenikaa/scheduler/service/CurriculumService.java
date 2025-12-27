@@ -82,6 +82,7 @@ public class CurriculumService {
         return "Import completed! Success: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

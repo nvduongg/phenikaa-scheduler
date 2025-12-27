@@ -27,6 +27,27 @@ public class LecturerController {
         return ResponseEntity.ok(lecturerService.getAllLecturers());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Lecturer> getLecturerById(@PathVariable Long id) {
+        return lecturerService.getLecturerById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Lecturer> createLecturer(@RequestBody Lecturer lecturer) {
+        return ResponseEntity.ok(lecturerService.createLecturer(lecturer));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Lecturer> updateLecturer(@PathVariable Long id, @RequestBody Lecturer lecturer) {
+        return lecturerService.updateLecturer(id, lecturer).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteLecturer(@PathVariable Long id) {
+        if (lecturerService.deleteLecturer(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> importLecturers(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.badRequest().body("File is empty");
@@ -68,5 +89,11 @@ public class LecturerController {
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(out.toByteArray());
         }
+    }
+
+    @PutMapping("/{id}/expertise")
+    public ResponseEntity<String> updateExpertise(@PathVariable Long id, @RequestBody List<String> courseCodes) {
+        lecturerService.updateExpertise(id, courseCodes);
+        return ResponseEntity.ok("Expertise updated successfully");
     }
 }

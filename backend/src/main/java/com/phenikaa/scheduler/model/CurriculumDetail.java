@@ -26,7 +26,7 @@ public class CurriculumDetail {
     private Course course;
 
     @Column(name = "semester_index", nullable = false)
-    private Integer semesterIndex;
+    private String semesterIndex; // Thay đổi từ Integer sang String để lưu "1,2" hoặc "1"
     
     // Tổng số tín chỉ của môn này trong CTĐT này (có thể khác nhau giữa các ngành)
     private Integer credits; 

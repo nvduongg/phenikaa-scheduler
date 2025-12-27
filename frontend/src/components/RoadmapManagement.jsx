@@ -23,10 +23,14 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
 
             // Sort theo Kỳ -> Tên Môn
             const sorted = data.sort((a, b) => {
-                if (a.semesterIndex === b.semesterIndex) {
+                // Parse semester string to compare first semester
+                const semA = parseInt(a.semesterIndex.split(',')[0]);
+                const semB = parseInt(b.semesterIndex.split(',')[0]);
+                
+                if (semA === semB) {
                     return a.course.name.localeCompare(b.course.name);
                 }
-                return a.semesterIndex - b.semesterIndex;
+                return semA - semB;
             });
 
             setDetails(sorted);
@@ -41,9 +45,28 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
         fetchDetails();
     }, [targetCurriculum]); // Chạy lại khi target thay đổi
 
+    const groupedDetails = React.useMemo(() => {
+        const groups = {};
+        details.forEach(item => {
+            const sem = item.semesterIndex;
+            if (!groups[sem]) groups[sem] = [];
+            groups[sem].push(item);
+        });
+        return groups;
+    }, [details]);
+
+    const sortedSemesters = React.useMemo(() => {
+        return Object.keys(groupedDetails).sort((a, b) => {
+            const semA = parseInt(a.split(',')[0]);
+            const semB = parseInt(b.split(',')[0]);
+            return semA - semB;
+        });
+    }, [groupedDetails]);
+
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/curriculum-details/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
@@ -76,8 +99,15 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             dataIndex: 'semesterIndex',
             key: 'sem',
             align: 'center',
-            width: 100,
-            render: (sem) => <Tag color="blue">Sem {sem}</Tag>
+            width: 120,
+            render: (sem) => {
+                const sems = sem.toString().split(',');
+                return (
+                    <Space size={4}>
+                        {sems.map(s => <Tag color="blue" key={s}>Sem {s.trim()}</Tag>)}
+                    </Space>
+                );
+            }
         },
         {
             title: 'Course Code',
@@ -138,15 +168,27 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
                 </Space>
             </div>
 
-            <Card bodyStyle={{ padding: 0 }}>
-                <Table 
-                    rowKey="id"
-                    columns={columns} 
-                    dataSource={details} 
-                    loading={loading}
-                    pagination={{ pageSize: 15 }}
-                />
-            </Card>
+            {loading ? (
+                <Card loading />
+            ) : (
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                    {sortedSemesters.length > 0 ? (
+                        sortedSemesters.map(sem => (
+                            <Card key={sem} title={`Semester ${sem}`} size="small" type="inner">
+                                <Table 
+                                    rowKey="id"
+                                    columns={columns.filter(c => c.key !== 'sem')} 
+                                    dataSource={groupedDetails[sem]} 
+                                    pagination={false}
+                                    size="small"
+                                />
+                            </Card>
+                        ))
+                    ) : (
+                        <Card><Text type="secondary">No roadmap data found.</Text></Card>
+                    )}
+                </Space>
+            )}
         </Space>
     );
 };

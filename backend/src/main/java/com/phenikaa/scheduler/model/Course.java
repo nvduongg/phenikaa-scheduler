@@ -1,11 +1,12 @@
 package com.phenikaa.scheduler.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
 @Table(name = "courses")
@@ -15,40 +16,55 @@ import lombok.NoArgsConstructor;
 public class Course {
 
     @Id
-    @Column(name = "course_code", length = 20) // Mã HP làm khóa chính, VD: "CSE702011"
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "course_code", length = 20, unique = true, nullable = false)
     private String courseCode;
 
     @Column(nullable = false)
-    private String name; // Tên HP: "Điện toán đám mây"
+    private String name;
 
-    // Tổng số tín chỉ (VD: 3)
     @Column(name = "credits", nullable = false)
-    private Integer credits;
+    private Double credits;
 
-    // Số tín chỉ Lý thuyết (VD: 2) -> Dùng để tính số tiết LT
     @Column(name = "theory_credits", nullable = false)
-    private Integer theoryCredits;
+    private Double theoryCredits;
 
-    // Số tín chỉ Thực hành (VD: 1) -> Dùng để tính số tiết TH
     @Column(name = "practice_credits", nullable = false)
-    private Integer practiceCredits;
+    private Double practiceCredits;
 
-    // Môn học thuộc Khoa nào? (Ràng buộc FK)
+    // --- CÁC TRƯỜNG MỚI CẦN BỔ SUNG ĐỂ TỰ ĐỘNG TÁCH LỚP ---
+
+    // Sĩ số tối đa cho lớp Lý thuyết (VD: 100 hoặc 120 cho giảng đường lớn)
+    @Column(name = "theory_quota_limit")
+    private Integer theoryQuotaLimit = 60; // Mặc định 60 nếu không set
+
+    // Sĩ số tối đa cho lớp Thực hành (VD: 40 cho phòng Lab)
+    @Column(name = "practice_quota_limit")
+    private Integer practiceQuotaLimit = 40; // Mặc định 40
+
+    // Đánh dấu môn học Online/E-learning (Để gom lớp siêu to)
+    @Column(name = "is_online")
+    private Boolean isOnline = false;
+
+    // --------------------------------------------------------
+
     @ManyToOne
-    @JoinColumn(name = "faculty_id", nullable = false)
+    @JoinColumn(name = "faculty_id", nullable = true)
     private Faculty faculty;
 
-    // Tính chất môn: Bắt buộc, Tự chọn (Optional)
-    // Giúp xếp lịch ưu tiên các môn bắt buộc trước
-    private Boolean isCompulsory = true; 
-
-    // Khoa chịu trách nhiệm chuyên môn
     @ManyToOne
-    @JoinColumn(name = "managing_faculty_id", nullable = false)
+    @JoinColumn(name = "school_id", nullable = true)
+    private School school;
+
+    private Boolean isCompulsory = true;
+
+    @ManyToOne
+    @JoinColumn(name = "managing_faculty_id", nullable = true)
     private Faculty managingFaculty;
 
-    // Giang viên có chuyên môn về môn này
-    @ManyToMany(mappedBy = "teachingCourses", fetch = FetchType.EAGER) // Eager để load luôn danh sách giảng viên khi get Course
-    @JsonIgnoreProperties("teachingCourses") // Chặn Jackson serialize ngược lại từ Lecturer -> Course để tránh vòng lặp
-    private java.util.List<Lecturer> lecturers;
+    @ManyToMany(mappedBy = "teachingCourses", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("teachingCourses")
+    private List<Lecturer> lecturers;
 }

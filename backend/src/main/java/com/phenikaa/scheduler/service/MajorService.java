@@ -26,6 +26,52 @@ public class MajorService {
         return majorRepo.findAll();
     }
 
+    public List<Major> getMajorsBySchoolId(Long schoolId) {
+        return majorRepo.findByFacultySchoolId(schoolId);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Major> getMajorById(Long id) {
+        return majorRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public Major createMajor(Major major) {
+        if (major.getFaculty() != null) {
+            if (major.getFaculty().getId() != null) {
+                facultyRepo.findById(major.getFaculty().getId()).ifPresent(major::setFaculty);
+            } else if (major.getFaculty().getCode() != null) {
+                facultyRepo.findByCode(major.getFaculty().getCode()).ifPresent(major::setFaculty);
+            }
+        }
+        return majorRepo.save(major);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Major> updateMajor(Long id, Major updated) {
+        return majorRepo.findById(id).map(m -> {
+            m.setCode(updated.getCode());
+            m.setName(updated.getName());
+            if (updated.getFaculty() != null) {
+                if (updated.getFaculty().getId() != null) {
+                    facultyRepo.findById(updated.getFaculty().getId()).ifPresent(m::setFaculty);
+                } else if (updated.getFaculty().getCode() != null) {
+                    facultyRepo.findByCode(updated.getFaculty().getCode()).ifPresent(m::setFaculty);
+                }
+            }
+            return majorRepo.save(m);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteMajor(Long id) {
+        if (majorRepo.existsById(id)) {
+            majorRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public String importMajorsExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
@@ -74,6 +120,7 @@ public class MajorService {
         return "Import completed! Success: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

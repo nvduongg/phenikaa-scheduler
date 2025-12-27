@@ -1,6 +1,8 @@
 package com.phenikaa.scheduler.service;
 
-import com.phenikaa.scheduler.algorithm.TimeTableValidator;
+import com.phenikaa.scheduler.core.GeneticAlgorithm;
+import com.phenikaa.scheduler.validator.*;
+import com.phenikaa.scheduler.model.Course;
 import com.phenikaa.scheduler.model.CourseOffering;
 import com.phenikaa.scheduler.model.Room;
 import com.phenikaa.scheduler.model.Semester;
@@ -20,36 +22,37 @@ public class SchedulerService {
 
     @Autowired private CourseOfferingRepository offeringRepo;
     @Autowired private RoomRepository roomRepo;
-    @Autowired private SemesterRepository semesterRepo; // Để lấy kỳ hiện tại
+    @Autowired private SemesterRepository semesterRepo;
     @Autowired private TimeTableValidator validator;
+    @Autowired private GeneticAlgorithm geneticAlgorithm;
+
+    @Transactional
+    public String generateSchedule(String algorithm) {
+        // Mặc định: GA nếu không truyền hoặc truyền GA
+        if (algorithm == null || algorithm.equalsIgnoreCase("GA")) {
+            Semester currentSem = semesterRepo.findByIsCurrentTrue().orElse(null);
+            if (currentSem == null) return "Error: No active semester found! Please activate a semester first.";
+            return geneticAlgorithm.runGeneticAlgorithm(currentSem.getId());
+        }
+
+        // Ngược lại dùng heuristic cũ
+        return generateSchedule();
+    }
 
     @Transactional
     public String generateSchedule() {
-        // 0. Chỉ xếp lịch cho kỳ hiện tại (Active Semester)
+        // 1. Lấy Học kỳ hiện tại (Active Semester)
         Semester currentSem = semesterRepo.findByIsCurrentTrue().orElse(null);
-        if (currentSem == null) return "No active semester found!";
+        if (currentSem == null) return "Error: No active semester found! Please activate a semester first.";
 
-        // Lấy offerings của kỳ này (Bạn cần update Repo để findBySemester)
-        // Tạm thời lấy tất cả, nhưng logic chuẩn là phải filter theo kỳ
-        List<CourseOffering> offerings = offeringRepo.findAll(); 
+        // 2. Lấy danh sách lớp CỦA KỲ NÀY
+        List<CourseOffering> offerings = offeringRepo.findBySemester_Id(currentSem.getId());
+        if (offerings.isEmpty()) return "Error: No offerings found for the current semester (" + currentSem.getName() + ")";
+
         List<Room> rooms = roomRepo.findAll();
 
-        // Calculate max lab capacity
-        int maxLabCapacity = rooms.stream()
-            .filter(r -> r.getType().equalsIgnoreCase("LAB"))
-            .mapToInt(Room::getCapacity)
-            .max().orElse(40);
-        
-        // Reset trạng thái & Auto-fix Lab Size
+        // 3. Reset trạng thái trước khi xếp (Clear lịch cũ của kỳ này)
         for (CourseOffering o : offerings) {
-            boolean isLab = o.getCourse().getName().toLowerCase().contains("thực hành") 
-                         || o.getCourse().getName().toLowerCase().contains("(th)")
-                         || (o.getCourse().getPracticeCredits() != null && o.getCourse().getPracticeCredits() > 0);
-            
-            if (isLab && o.getPlannedSize() > maxLabCapacity) {
-                o.setPlannedSize(maxLabCapacity);
-            }
-
             o.setStatus("PLANNED");
             o.setStatusMessage(null);
             o.setDayOfWeek(null);
@@ -58,61 +61,82 @@ public class SchedulerService {
             o.setRoom(null);
         }
 
-        // Sort phòng: Bé trước, Lớn sau để tiết kiệm phòng lớn
-        rooms.sort(Comparator.comparingInt(Room::getCapacity));
+        // 4. Sắp xếp danh sách ưu tiên (Heuristic Strategy)
+        // Ưu tiên 1: Lớp LT (Cha) xếp trước (Vì lớp to khó xếp hơn & để làm mốc cho lớp con)
+        // Ưu tiên 2: Sĩ số giảm dần (Phòng to hiếm hơn phòng nhỏ)
+        offerings.sort((o1, o2) -> {
+            String type1 = o1.getClassType() == null ? "" : o1.getClassType();
+            String type2 = o2.getClassType() == null ? "" : o2.getClassType();
 
-        // Sort lớp học: Lớp khó xếp (đông, nhiều tín chỉ) xếp trước
-        offerings.sort((o1, o2) -> o2.getPlannedSize() - o1.getPlannedSize());
+            int score1 = type1.equals("LT") ? 2 : (type1.equals("TH") ? 1 : 0);
+            int score2 = type2.equals("LT") ? 2 : (type2.equals("TH") ? 1 : 0);
+            
+            if (score1 != score2) return score2 - score1; // LT xếp trước TH
+            return o2.getPlannedSize() - o1.getPlannedSize(); // Lớp đông xếp trước
+        });
+
+        // Sort phòng: Bé trước -> Lớn sau (Best Fit Strategy)
+        // Để tránh lãng phí phòng to cho lớp nhỏ
+        rooms.sort(Comparator.comparingInt(Room::getCapacity));
 
         List<CourseOffering> scheduledList = new ArrayList<>();
         int successCount = 0;
         int failCount = 0;
 
+        // 5. VÒNG LẶP XẾP LỊCH CHÍNH
         for (CourseOffering offering : offerings) {
-            // Xác định thời lượng
-            int credits = offering.getCourse().getCredits();
-            int duration = (credits > 0) ? credits : 3; // Mặc định 3 tiết nếu ko có data
+            Course course = offering.getCourse();
+            String classType = offering.getClassType() != null ? offering.getClassType() : "ALL";
+
+            // A. Xác định Loại phòng cần thiết
+            // Mặc định là phòng học lý thuyết
+            String requiredRoomType = "THEORY"; 
+            
+            if ("TH".equals(classType)) {
+                requiredRoomType = "LAB";
+            } else if ("ELN".equals(classType) || Boolean.TRUE.equals(course.getIsOnline())) {
+                requiredRoomType = "ONLINE";
+            }
+
+            // B. Xác định Thời lượng (Số tiết) - Logic đồng bộ với Validator
+            int duration = 3; // Mặc định
+            if ("LT".equals(classType)) duration = (int) Math.ceil(course.getTheoryCredits());
+            else if ("TH".equals(classType)) duration = (int) Math.ceil(course.getPracticeCredits());
+            else duration = (int) Math.ceil(course.getCredits());
+            
+            if (duration <= 0) duration = 3; // Fallback an toàn
+
+            // C. Xác định Ca học (Start Periods)
+            boolean isOnline = "ONLINE".equals(requiredRoomType);
+            
+            // Nếu Online -> Ưu tiên Ca tối (Tiết 13), sau đó mới đến các ca ngày
+            // Nếu Offline -> Chỉ các kíp chuẩn ban ngày (1, 4, 7, 10)
+            int[] startPeriods = isOnline ? new int[]{13, 1, 4, 7, 10} : new int[]{1, 4, 7, 10};
 
             boolean assigned = false;
-            
-            // XÁC ĐỊNH CA HỌC DỰA TRÊN LOẠI PHÒNG (Online -> Tối)
-            // Nếu muốn xếp Online vào tối, ta check loại phòng hoặc tên môn
-            boolean isOnline = false;
-            if (offering.getRoom() != null && offering.getRoom().getType().equals("ONLINE")) isOnline = true;
-            // Hoặc check tên môn nếu chưa gán phòng
-            if (offering.getCourse().getName().toUpperCase().contains("ONLINE")) isOnline = true;
-
-            // Xác định các Slot bắt đầu hợp lệ (Standard Time Blocks)
-            int[] startPeriods;
-            
-            if (isOnline) {
-                // Ca tối: Bắt đầu tiết 13 (19h)
-                startPeriods = new int[]{13}; 
-            } else {
-                // Ca ngày: 1, 4, 7, 10
-                startPeriods = new int[]{1, 4, 7, 10};
-            }
 
             // Loop Ngày
             daysLoop:
-            for (int day = 2; day <= 8; day++) { // Từ Thứ 2 đến CN (CN thường cho Online)
-                
-                // Nếu Online ưu tiên xếp CN hoặc buổi tối các ngày
-                if (isOnline && day < 8 && startPeriods[0] != 13) continue; 
+            for (int day = 2; day <= 8; day++) { // Thứ 2 -> CN
+                // Nếu không phải Online, hạn chế xếp CN (trừ khi không còn cách nào khác)
+                if (!isOnline && day == 8) continue; 
 
                 for (int start : startPeriods) {
-                    
                     // Loop Phòng
                     for (Room room : rooms) {
                         
-                        // Nếu là lớp Online, chỉ xếp vào phòng ảo
-                        if (isOnline && !room.getType().equals("ONLINE")) continue;
-                        // Nếu lớp Offline, không xếp vào phòng ảo
-                        if (!isOnline && room.getType().equals("ONLINE")) continue;
+                        // 1. Check Loại phòng (QUAN TRỌNG)
+                        // Lớp TH phải vào Lab, Lớp LT phải vào Giảng đường
+                        if (!room.getType().equalsIgnoreCase(requiredRoomType)) continue;
 
-                        // Check Ràng buộc
+                        // 2. Check Sức chứa
+                        if (room.getCapacity() < offering.getPlannedSize()) continue;
+
+                        // 3. Check Ràng buộc cứng (Trùng lịch, Trùng GV, Trùng Cha-Con)
+                        // Gọi Validator đã update
                         if (validator.checkHardConstraints(offering, day, start, room, scheduledList)) {
                             
+                            // Gán lịch thành công
                             offering.setDayOfWeek(day);
                             offering.setStartPeriod(start);
                             offering.setEndPeriod(start + duration - 1);
@@ -128,73 +152,47 @@ public class SchedulerService {
                 }
             }
 
+            // D. Xử lý khi thất bại (Diagnostic)
             if (!assigned) {
                 offering.setStatus("ERROR");
-                
-                // Diagnostic
-                boolean hasCapacity = rooms.stream().anyMatch(r -> r.getCapacity() >= offering.getPlannedSize());
-                
-                boolean isLab = offering.getCourse().getName().toLowerCase().contains("thực hành") 
-                             || offering.getCourse().getName().toLowerCase().contains("(th)")
-                             || (offering.getCourse().getPracticeCredits() != null && offering.getCourse().getPracticeCredits() > 0);
-                
-                boolean finalIsOnline = isOnline; // effectively final for lambda
-                boolean hasType = rooms.stream().anyMatch(r -> {
-                    if (finalIsOnline) return r.getType().equals("ONLINE");
-                    if (isLab) return r.getType().equalsIgnoreCase("LAB");
-                    return !r.getType().equalsIgnoreCase("LAB") && !r.getType().equals("ONLINE");
-                });
-
-                if (!hasCapacity) {
-                    offering.setStatusMessage("No room has enough capacity (" + offering.getPlannedSize() + ")");
-                } else if (!hasType) {
-                    offering.setStatusMessage("No room of required type found");
-                } else {
-                    // Try to find a specific conflict reason
-                    String conflictReason = "Time/Room conflict (Unknown)";
-                    
-                    // Find a candidate room that satisfies hard constraints
-                    Room candidateRoom = rooms.stream()
-                        .filter(r -> r.getCapacity() >= offering.getPlannedSize())
-                        .filter(r -> {
-                             if (finalIsOnline) return r.getType().equals("ONLINE");
-                             if (isLab) return r.getType().equalsIgnoreCase("LAB");
-                             return !r.getType().equalsIgnoreCase("LAB") && !r.getType().equals("ONLINE");
-                        })
-                        .findFirst().orElse(null);
-
-                    if (candidateRoom == null) {
-                        offering.setStatusMessage("No room matches BOTH Capacity (" + offering.getPlannedSize() + ") and Type (" + (isLab ? "LAB" : "THEORY") + ")");
-                    } else {
-                        // Check why this room failed in standard slots
-                        // Include 13 (Evening) for offline classes too, as user has defined it in time_slots
-                        int[] checkStarts = finalIsOnline ? new int[]{13} : new int[]{1, 4, 7, 10, 13};
-                        // Check first valid day/slot
-                        for (int d = 2; d <= 8; d++) { // Check up to Sunday
-                             for (int s : checkStarts) {
-                                 String reason = validator.getConflictDetail(offering, d, s, candidateRoom, scheduledList);
-                                 if (reason != null) {
-                                     conflictReason = reason;
-                                     break;
-                                 }
-                             }
-                             if (!conflictReason.equals("Time/Room conflict (Unknown)")) break;
-                        }
-                        
-                        if (conflictReason.equals("Time/Room conflict (Unknown)")) {
-                             conflictReason = "Diagnostic Error: Room " + candidateRoom.getName() + " appears valid but was not selected.";
-                        }
-                        offering.setStatusMessage(conflictReason);
-                    }
-                }
-
                 failCount++;
+                
+                // Phân tích nguyên nhân chi tiết để báo lại cho Admin
+                analyzeFailureReason(offering, rooms, requiredRoomType, scheduledList);
             } else {
                 offering.setStatusMessage("OK");
             }
         }
 
         offeringRepo.saveAll(offerings);
-        return String.format("Scheduling for %s completed. Success: %d. Failed: %d", currentSem.getName(), successCount, failCount);
+        return String.format("Heuristic Scheduling for '%s' completed.\nSuccess: %d\nFailed: %d", currentSem.getName(), successCount, failCount);
+    }
+
+    // Hàm phụ trợ: Phân tích nguyên nhân lỗi
+    private void analyzeFailureReason(CourseOffering offering, List<Room> rooms, String requiredType, List<CourseOffering> scheduledList) {
+        // 1. Kiểm tra xem có phòng nào đủ sức chứa và đúng loại không (bỏ qua lịch trống)
+        long validRoomsCount = rooms.stream()
+                .filter(r -> r.getType().equalsIgnoreCase(requiredType) && r.getCapacity() >= offering.getPlannedSize())
+                .count();
+
+        if (validRoomsCount == 0) {
+            offering.setStatusMessage("No " + requiredType + " room capacity >= " + offering.getPlannedSize());
+            return;
+        }
+
+        // 2. Nếu có phòng, thử tìm lý do conflict cụ thể với phòng đầu tiên phù hợp
+        Room candidate = rooms.stream()
+                .filter(r -> r.getType().equalsIgnoreCase(requiredType) && r.getCapacity() >= offering.getPlannedSize())
+                .findFirst().orElse(null);
+        
+        if (candidate != null) {
+                // Giả lập thử xếp vào Thứ 2, Tiết 1 xem lỗi gì
+                String reason = validator.getConflictDetail(offering, 2, 1, candidate, scheduledList);
+                if (reason != null) {
+                    offering.setStatusMessage("Conflict example: " + reason);
+                } else {
+                    offering.setStatusMessage("Scheduling Constraint Failed (Complex overlap)");
+                }
+        }
     }
 }

@@ -20,25 +20,39 @@ public class CourseOffering {
     @Column(nullable = false, unique = true)
     private String code; // Mã lớp học phần (Ví dụ: 20242-CSE702011-01)
 
-    // --- SỬA TẠI ĐÂY ---
-    // Cách 1: Liên kết theo ID (Khuyên dùng) - Đổi tên cột FK thành course_id cho chuẩn
+    // Liên kết với Môn học
     @ManyToOne
-    @JoinColumn(name = "course_id", nullable = false) 
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JoinColumn(name = "course_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "lecturers"}) // Tránh load lại danh sách GV của môn
     private Course course;
 
-    // HOẶC Cách 2: Nếu bạn bắt buộc muốn giữ liên kết theo Mã môn (course_code)
-    // @ManyToOne
-    // @JoinColumn(name = "course_code", referencedColumnName = "course_code", nullable = false) // Sửa courseCode thành course_code
-    // @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    // private Course course;
-    // -------------------
+    // --- CÁC TRƯỜNG MỚI ĐỂ HỖ TRỢ TÁCH LỚP (STRUCTURE-BASED) ---
+
+    // 1. Loại lớp: "LT" (Lý thuyết), "TH" (Thực hành), "ELN" (Online), "ALL" (Lớp thường)
+    @Column(name = "class_type")
+    private String classType = "ALL"; 
+
+    // 2. Mối quan hệ Cha - Con (Lớp TH trỏ về Lớp LT của nó)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "parent_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "parent", "children"}) // Chặn vòng lặp vô hạn JSON
+    private CourseOffering parent;
+
+    // 3. Liên kết với Kỳ học (Để biết lớp này thuộc kỳ nào)
+    @ManyToOne
+    @JoinColumn(name = "semester_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Semester semester;
+
+    // -----------------------------------------------------------
 
     @Column(name = "planned_size")
     private Integer plannedSize;
 
     @Column(name = "target_classes")
-    private String targetClasses;
+    private String targetClasses; // K17-CNTT1; K17-CNTT2
+
+    // --- KẾT QUẢ XẾP LỊCH (OUTPUT) ---
 
     @ManyToOne
     @JoinColumn(name = "lecturer_id")
@@ -55,8 +69,8 @@ public class CourseOffering {
     private Integer endPeriod;
     
     @Column(nullable = false)
-    private String status = "PLANNED"; 
+    private String status = "PLANNED"; // PLANNED, SCHEDULED, ERROR
 
     @Column(name = "status_message")
-    private String statusMessage;
+    private String statusMessage; // Ghi chú lỗi nếu xếp lịch thất bại
 }

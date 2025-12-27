@@ -21,6 +21,35 @@ public class RoomService {
         return roomRepo.findAll();
     }
 
+    @SuppressWarnings("null")
+    public java.util.Optional<Room> getRoomById(Long id) {
+        return roomRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public Room createRoom(Room room) {
+        return roomRepo.save(room);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Room> updateRoom(Long id, Room updated) {
+        return roomRepo.findById(id).map(r -> {
+            r.setName(updated.getName());
+            r.setCapacity(updated.getCapacity());
+            r.setType(updated.getType());
+            return roomRepo.save(r);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteRoom(Long id) {
+        if (roomRepo.existsById(id)) {
+            roomRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public String importRoomsExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
         int newCount = 0;
@@ -133,6 +162,7 @@ public class RoomService {
         return "THEORY";
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

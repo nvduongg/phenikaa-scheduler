@@ -2,17 +2,20 @@ package com.phenikaa.scheduler.controller;
 
 import com.phenikaa.scheduler.model.School;
 import com.phenikaa.scheduler.service.SchoolService;
+import com.phenikaa.scheduler.security.services.UserDetailsImpl;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -23,8 +26,45 @@ public class SchoolController {
     @Autowired private SchoolService schoolService;
 
     @GetMapping
-    public ResponseEntity<List<School>> getAllSchools() {
+    public ResponseEntity<List<School>> getAllSchools(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            // Nếu là ADMIN_SCHOOL, chỉ trả về trường của họ
+            if (userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN_SCHOOL"))) {
+                if (userDetails.getSchoolId() != null) {
+                    return schoolService.getSchoolById(userDetails.getSchoolId())
+                            .map(school -> ResponseEntity.ok(Collections.singletonList(school)))
+                            .orElse(ResponseEntity.ok(Collections.emptyList()));
+                }
+            }
+        }
         return ResponseEntity.ok(schoolService.getAllSchools());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<School> getSchoolById(@PathVariable Long id) {
+        return schoolService.getSchoolById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<School> createSchool(@RequestBody School school) {
+        School created = schoolService.createSchool(school);
+        return ResponseEntity.ok(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<School> updateSchool(@PathVariable Long id, @RequestBody School school) {
+        return schoolService.updateSchool(id, school)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSchool(@PathVariable Long id) {
+        if (schoolService.deleteSchool(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

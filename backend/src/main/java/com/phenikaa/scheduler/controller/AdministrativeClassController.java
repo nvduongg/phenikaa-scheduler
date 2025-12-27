@@ -2,12 +2,14 @@ package com.phenikaa.scheduler.controller;
 
 import com.phenikaa.scheduler.model.AdministrativeClass;
 import com.phenikaa.scheduler.service.AdministrativeClassService;
+import com.phenikaa.scheduler.security.services.UserDetailsImpl;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,8 +25,37 @@ public class AdministrativeClassController {
     @Autowired private AdministrativeClassService adminClassService;
 
     @GetMapping
-    public ResponseEntity<List<AdministrativeClass>> getAllClasses() {
+    public ResponseEntity<List<AdministrativeClass>> getAllClasses(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            if (userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN_SCHOOL"))) {
+                if (userDetails.getSchoolId() != null) {
+                    return ResponseEntity.ok(adminClassService.getClassesBySchoolId(userDetails.getSchoolId()));
+                }
+            }
+        }
         return ResponseEntity.ok(adminClassService.getAllClasses());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AdministrativeClass> getClassById(@PathVariable Long id) {
+        return adminClassService.getClassById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<AdministrativeClass> createClass(@RequestBody AdministrativeClass adminClass) {
+        return ResponseEntity.ok(adminClassService.createClass(adminClass));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AdministrativeClass> updateClass(@PathVariable Long id, @RequestBody AdministrativeClass adminClass) {
+        return adminClassService.updateClass(id, adminClass).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteClass(@PathVariable Long id) {
+        if (adminClassService.deleteClass(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

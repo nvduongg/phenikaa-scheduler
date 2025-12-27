@@ -71,11 +71,8 @@ public class CurriculumDetailService {
                     detail.setCourse(courseOpt.get());
                     
                     // Parse Semester Index
-                    try {
-                        detail.setSemesterIndex((int) Double.parseDouble(semesterStr));
-                    } catch (NumberFormatException e) {
-                        detail.setSemesterIndex(1); // Default to Semester 1
-                    }
+                    // Support multiple semesters like "1,2" or "1"
+                    detail.setSemesterIndex(semesterStr);
                     
                     // Lấy số tín chỉ từ môn học để lưu (nếu cần hiển thị nhanh, nhưng trong entity mình chỉ map semester)
                     // detail.setCredits(...) // Nếu entity có trường này
@@ -93,6 +90,7 @@ public class CurriculumDetailService {
         return "Import completed! Success: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

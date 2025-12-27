@@ -27,6 +27,27 @@ public class CohortController {
         return ResponseEntity.ok(cohortService.getAllCohorts());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Cohort> getCohortById(@PathVariable Long id) {
+        return cohortService.getCohortById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Cohort> createCohort(@RequestBody Cohort cohort) {
+        return ResponseEntity.ok(cohortService.createCohort(cohort));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Cohort> updateCohort(@PathVariable Long id, @RequestBody Cohort cohort) {
+        return cohortService.updateCohort(id, cohort).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCohort(@PathVariable Long id) {
+        if (cohortService.deleteCohort(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> importCohorts(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.badRequest().body("File is empty");

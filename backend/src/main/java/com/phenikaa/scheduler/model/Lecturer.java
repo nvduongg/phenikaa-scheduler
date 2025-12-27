@@ -44,7 +44,7 @@ public class Lecturer {
     @JoinTable(
         name = "lecturer_expertise",
         joinColumns = @JoinColumn(name = "lecturer_id"),
-        inverseJoinColumns = @JoinColumn(name = "course_code") // Map với Course Code
+        inverseJoinColumns = @JoinColumn(name = "course_id") // Map với Course ID
     )
     // Chặn Jackson serialize ngược lại từ Course -> Lecturer để tránh vòng lặp
     @JsonIgnoreProperties("lecturers") 

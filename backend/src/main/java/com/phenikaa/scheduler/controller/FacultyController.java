@@ -2,12 +2,14 @@ package com.phenikaa.scheduler.controller;
 
 import com.phenikaa.scheduler.model.Faculty;
 import com.phenikaa.scheduler.service.FacultyService;
+import com.phenikaa.scheduler.security.services.UserDetailsImpl; // Import UserDetailsImpl
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication; // Import Authentication
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,8 +25,38 @@ public class FacultyController {
     @Autowired private FacultyService facultyService;
 
     @GetMapping
-    public ResponseEntity<List<Faculty>> getAllFaculties() {
+    public ResponseEntity<List<Faculty>> getAllFaculties(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            // Nếu là ADMIN_SCHOOL, chỉ trả về khoa thuộc trường đó
+            if (userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN_SCHOOL"))) {
+                if (userDetails.getSchoolId() != null) {
+                    return ResponseEntity.ok(facultyService.getFacultiesBySchoolId(userDetails.getSchoolId()));
+                }
+            }
+        }
         return ResponseEntity.ok(facultyService.getAllFaculties());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Faculty> getFacultyById(@PathVariable Long id) {
+        return facultyService.getFacultyById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Faculty> createFaculty(@RequestBody Faculty faculty) {
+        return ResponseEntity.ok(facultyService.createFaculty(faculty));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Faculty> updateFaculty(@PathVariable Long id, @RequestBody Faculty faculty) {
+        return facultyService.updateFaculty(id, faculty).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteFaculty(@PathVariable Long id) {
+        if (facultyService.deleteFaculty(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

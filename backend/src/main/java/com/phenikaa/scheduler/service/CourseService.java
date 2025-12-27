@@ -4,6 +4,7 @@ import com.phenikaa.scheduler.model.Course;
 import com.phenikaa.scheduler.model.Faculty;
 import com.phenikaa.scheduler.repository.CourseRepository;
 import com.phenikaa.scheduler.repository.FacultyRepository;
+import com.phenikaa.scheduler.repository.SchoolRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +22,73 @@ public class CourseService {
 
     @Autowired private CourseRepository courseRepo;
     @Autowired private FacultyRepository facultyRepo;
+    @Autowired private SchoolRepository schoolRepo;
 
     public List<Course> getAllCourses() {
         return courseRepo.findAll();
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Course> getCourseById(Long id) {
+        return courseRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public Course createCourse(Course course) {
+        if (course.getManagingFaculty() != null) {
+            if (course.getManagingFaculty().getId() != null) {
+                facultyRepo.findById(course.getManagingFaculty().getId()).ifPresent(course::setManagingFaculty);
+            } else if (course.getManagingFaculty().getCode() != null) {
+                facultyRepo.findByCode(course.getManagingFaculty().getCode()).ifPresent(course::setManagingFaculty);
+            }
+            // also set administrative faculty if null
+            if (course.getFaculty() == null) course.setFaculty(course.getManagingFaculty());
+            course.setSchool(null);
+        } else if (course.getSchool() != null) {
+            if (course.getSchool().getId() != null) {
+                schoolRepo.findById(course.getSchool().getId()).ifPresent(course::setSchool);
+            } else if (course.getSchool().getCode() != null) {
+                schoolRepo.findByCode(course.getSchool().getCode()).ifPresent(course::setSchool);
+            }
+            course.setFaculty(null);
+            course.setManagingFaculty(null);
+        }
+        return courseRepo.save(course);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Course> updateCourse(Long id, Course updated) {
+        return courseRepo.findById(id).map(c -> {
+            c.setCourseCode(updated.getCourseCode());
+            c.setName(updated.getName());
+            c.setCredits(updated.getCredits());
+            c.setTheoryCredits(updated.getTheoryCredits());
+            c.setPracticeCredits(updated.getPracticeCredits());
+            
+            if (updated.getManagingFaculty() != null) {
+                if (updated.getManagingFaculty().getId() != null) facultyRepo.findById(updated.getManagingFaculty().getId()).ifPresent(c::setManagingFaculty);
+                else if (updated.getManagingFaculty().getCode() != null) facultyRepo.findByCode(updated.getManagingFaculty().getCode()).ifPresent(c::setManagingFaculty);
+                
+                if (c.getFaculty() == null) c.setFaculty(c.getManagingFaculty());
+                c.setSchool(null);
+            } else if (updated.getSchool() != null) {
+                if (updated.getSchool().getId() != null) schoolRepo.findById(updated.getSchool().getId()).ifPresent(c::setSchool);
+                else if (updated.getSchool().getCode() != null) schoolRepo.findByCode(updated.getSchool().getCode()).ifPresent(c::setSchool);
+                
+                c.setFaculty(null);
+                c.setManagingFaculty(null);
+            }
+            return courseRepo.save(c);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteCourse(Long id) {
+        if (courseRepo.existsById(id)) {
+            courseRepo.deleteById(id);
+            return true;
+        }
+        return false;
     }
 
     public String importCoursesExcel(MultipartFile file) {
@@ -56,26 +121,39 @@ public class CourseService {
                     course.setName(courseName);
 
                     // 2. Parse các chỉ số tín chỉ
-                    course.setCredits(parseIntSafe(row.getCell(2)));
-                    course.setTheoryCredits(parseIntSafe(row.getCell(3)));
-                    course.setPracticeCredits(parseIntSafe(row.getCell(4)));
+                    course.setCredits(parseDoubleSafe(row.getCell(2)));
+                    course.setTheoryCredits(parseDoubleSafe(row.getCell(3)));
+                    course.setPracticeCredits(parseDoubleSafe(row.getCell(4)));
 
-                    // 3. Xử lý Khoa quản lý
+                    // 3. Xử lý Khoa/Trường quản lý
                     String facultyCode = getCellValue(row.getCell(5));
-                    Optional<Faculty> facultyOpt = facultyRepo.findByCode(facultyCode);
+                    String schoolCode = getCellValue(row.getCell(6));
 
-                    if (facultyOpt.isPresent()) {
-                        Faculty fac = facultyOpt.get();
-
-                        // --- SỬA TẠI ĐÂY ---
-                        course.setManagingFaculty(fac); // Gán khoa chuyên môn
-                        course.setFaculty(fac);         // Gán khoa hành chính (FIX LỖI NULL faculty_id)
-                        // -------------------
-
-                        courseRepo.save(course);
-                        successCount++;
+                    if (!facultyCode.isEmpty()) {
+                        Optional<Faculty> facultyOpt = facultyRepo.findByCode(facultyCode);
+                        if (facultyOpt.isPresent()) {
+                            Faculty fac = facultyOpt.get();
+                            course.setManagingFaculty(fac);
+                            course.setFaculty(fac);
+                            course.setSchool(null);
+                            courseRepo.save(course);
+                            successCount++;
+                        } else {
+                            errors.add("Dòng " + (i + 1) + ": Không tìm thấy Mã khoa '" + facultyCode + "'");
+                        }
+                    } else if (!schoolCode.isEmpty()) {
+                        Optional<com.phenikaa.scheduler.model.School> schoolOpt = schoolRepo.findByCode(schoolCode);
+                        if (schoolOpt.isPresent()) {
+                            course.setSchool(schoolOpt.get());
+                            course.setManagingFaculty(null);
+                            course.setFaculty(null);
+                            courseRepo.save(course);
+                            successCount++;
+                        } else {
+                            errors.add("Dòng " + (i + 1) + ": Không tìm thấy Mã trường '" + schoolCode + "'");
+                        }
                     } else {
-                        errors.add("Dòng " + (i + 1) + ": Không tìm thấy Mã khoa '" + facultyCode + "'");
+                        errors.add("Dòng " + (i + 1) + ": Phải nhập Mã Khoa hoặc Mã Trường quản lý");
                     }
 
                 } catch (Exception ex) {
@@ -89,20 +167,19 @@ public class CourseService {
     }
 
     // Helper: Lấy string từ cell
-    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
-        cell.setCellType(CellType.STRING);
-        return cell.getStringCellValue().trim();
+        DataFormatter formatter = new DataFormatter();
+        return formatter.formatCellValue(cell).trim();
     }
 
-    // Helper: Parse Int an toàn
-    private int parseIntSafe(Cell cell) {
+    // Helper: Parse Double an toàn
+    private Double parseDoubleSafe(Cell cell) {
         try {
             String val = getCellValue(cell);
-            return val.isEmpty() ? 0 : (int) Double.parseDouble(val);
+            return val.isEmpty() ? 0.0 : Double.parseDouble(val);
         } catch (NumberFormatException e) {
-            return 0;
+            return 0.0;
         }
     }
 }

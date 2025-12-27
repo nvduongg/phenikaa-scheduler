@@ -22,6 +22,7 @@ public class SemesterService {
         return semesterRepo.save(semester);
     }
     
+    @SuppressWarnings("null")
     public void setAsCurrent(Long id) {
         semesterRepo.resetAllCurrent();
         Semester s = semesterRepo.findById(id).orElseThrow();

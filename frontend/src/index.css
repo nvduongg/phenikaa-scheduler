@@ -28,3 +28,22 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Ensure Ant Design notifications and messages use the Poppins system font */
+.ant-notification,
+.ant-notification-notice,
+.ant-notification-notice-message,
+.ant-notification-notice-description,
+.ant-message,
+.ant-message-notice,
+.ant-notification .ant-typography,
+.ant-message .ant-typography {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Also ensure modal and popover content inherit Poppins */
+.ant-modal,
+.ant-popover,
+.ant-popover-inner {
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}

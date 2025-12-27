@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Button, Table, message, Card, Typography, Space, Tag, Tooltip } from 'antd';
-import { UploadOutlined, DownloadOutlined, ReloadOutlined, ClockCircleOutlined, EnvironmentOutlined, UserSwitchOutlined } from '@ant-design/icons';
+import { Upload, Button, Table, message, Card, Typography, Space, Tag, Tooltip, Modal, Select } from 'antd';
+import { UploadOutlined, DownloadOutlined, ReloadOutlined, ClockCircleOutlined, EnvironmentOutlined, UserSwitchOutlined, NodeIndexOutlined, EditOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
 
 const { Title, Text } = Typography;
 
-const OfferingManagement = () => {
+const OfferingManagement = ({ user }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
+    
+    // Assign Lecturer State
+    const [lecturers, setLecturers] = useState([]);
+    const [assignModalVisible, setAssignModalVisible] = useState(false);
+    const [selectedOffering, setSelectedOffering] = useState(null);
+    const [selectedLecturerId, setSelectedLecturerId] = useState(null);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const response = await axiosClient.get('/offerings');
-            setData(response.data);
+            // Sắp xếp để lớp Mẹ (LT) nằm gần lớp Con (TH) cho dễ nhìn
+            const sortedData = response.data.sort((a, b) => a.code.localeCompare(b.code));
+            setData(sortedData);
         } catch (error) {
             message.error('Failed to load data: ' + error.message);
         } finally {
@@ -21,13 +29,24 @@ const OfferingManagement = () => {
         }
     };
 
+    const fetchLecturers = async () => {
+        try {
+            const res = await axiosClient.get('/lecturers');
+            setLecturers(res.data);
+        } catch (error) {
+            console.error("Failed to fetch lecturers", error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
+        fetchLecturers();
     }, []);
 
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/offerings/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
@@ -45,7 +64,7 @@ const OfferingManagement = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', 'Offering_Plan_Template.xlsx');
+            link.setAttribute('download', 'Offering_Plan_Template_v2.xlsx');
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -54,17 +73,35 @@ const OfferingManagement = () => {
         }
     };
 
-    // Hàm gọi API Auto Assign
     const handleAutoAssign = async () => {
         setLoading(true);
         try {
             const res = await axiosClient.post('/offerings/auto-assign-lecturers');
             message.success(res.data);
-            fetchData(); // Reload lại bảng để thấy kết quả
+            fetchData(); 
         } catch (error) {
             message.error("Auto-assign failed: " + error.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenAssignModal = (record) => {
+        setSelectedOffering(record);
+        setSelectedLecturerId(record.lecturer ? record.lecturer.id : null);
+        setAssignModalVisible(true);
+    };
+
+    const handleAssignLecturer = async () => {
+        try {
+            await axiosClient.put(`/offerings/${selectedOffering.id}/lecturer`, null, {
+                params: { lecturerId: selectedLecturerId }
+            });
+            message.success("Assigned lecturer successfully");
+            setAssignModalVisible(false);
+            fetchData();
+        } catch {
+            message.error("Failed to assign lecturer");
         }
     };
 
@@ -73,8 +110,40 @@ const OfferingManagement = () => {
             title: 'Class Code',
             dataIndex: 'code',
             key: 'code',
+            width: 230,
             render: (text) => <Text strong copyable>{text}</Text>,
         },
+        // --- CỘT MỚI: TYPE & PARENT ---
+        {
+            title: 'Type',
+            key: 'type',
+            width: 150,
+            align: 'center',
+            render: (_, record) => {
+                let color = 'default';
+                let typeText = record.classType || 'ALL';
+
+                if (typeText === 'LT') color = 'purple';
+                if (typeText === 'TH') color = 'orange';
+                if (typeText === 'ELN') color = 'cyan';
+
+                return (
+                    <Space direction="vertical" size={0}>
+                        <Tag color={color} style={{ fontWeight: 600 }}>{typeText}</Tag>
+                        
+                        {/* Nếu là lớp TH và có Parent, hiển thị mã Parent */}
+                        {typeText === 'TH' && record.parent && (
+                            <Tooltip title={`Parent Class: ${record.parent.code}`}>
+                                <div style={{ fontSize: '11px', color: '#888', marginTop: 4 }}>
+                                    <NodeIndexOutlined /> Parent: {record.parent.code.split('-').pop()}...
+                                </div>
+                            </Tooltip>
+                        )}
+                    </Space>
+                );
+            }
+        },
+        // -----------------------------
         {
             title: 'Course',
             dataIndex: 'course',
@@ -98,20 +167,46 @@ const OfferingManagement = () => {
             title: 'Assigned Lecturer',
             dataIndex: 'lecturer',
             key: 'lecturer',
-            render: (lec) => lec ? (
-                <Tag color="blue">{lec.fullName}</Tag>
-            ) : (
-                <Text type="secondary" italic>Auto-assign</Text>
-            )
+            render: (lecturer, record) => {
+                // Logic check quyền
+                const myFacultyId = user?.facultyId;
+                const managingFacultyId = record.course.managingFaculty?.id;
+                
+                // Có được quyền gán GV không?
+                // Chỉ được gán khi môn học thuộc khoa của mình
+                const canAssign = (user?.role === 'ADMIN_TRUONG') || 
+                                  (myFacultyId === managingFacultyId);
+
+                return (
+                    <Space>
+                        {lecturer ? <Tag color="blue">{lecturer.fullName}</Tag> : <Text type="secondary">Chưa gán</Text>}
+                        
+                        {/* Chỉ hiện nút Gán/Sửa nếu có quyền */}
+                        {canAssign && (
+                            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenAssignModal(record)}>
+                                {lecturer ? 'Đổi GV' : 'Gán GV'}
+                            </Button>
+                        )}
+                        
+                        {!canAssign && !lecturer && (
+                            <Tooltip title={`Chờ khoa ${record.course.managingFaculty?.name} phân công`}>
+                                <Tag color="warning">Chờ Khoa khác</Tag>
+                            </Tooltip>
+                        )}
+                    </Space>
+                );
+            }
         },
         {
-            title: 'Schedule (Output)', // Cột kết quả
+            title: 'Schedule (Output)',
             key: 'schedule',
             render: (_, record) => {
                 if (record.status === 'PLANNED') {
                     return <Tag icon={<ClockCircleOutlined />} color="default">Pending Schedule</Tag>;
                 }
-                // Sau này khi có kết quả sẽ hiện ở đây
+                if (record.status === 'ERROR') {
+                    return <Tag color="red">Conflict Error</Tag>;
+                }
                 return (
                     <Space direction="vertical" size={0}>
                         <Tag icon={<ClockCircleOutlined />} color="green">
@@ -134,9 +229,9 @@ const OfferingManagement = () => {
                     <Text type="secondary">Input Demand for Timetabling</Text>
                 </div>
                 <Space>
-                    {/* Thêm nút Auto Assign vào đây */}
                     <Button 
                         type="primary" 
+                        danger // Đổi màu đỏ cho nổi bật
                         icon={<UserSwitchOutlined />} 
                         onClick={handleAutoAssign}
                         loading={loading}
@@ -163,6 +258,33 @@ const OfferingManagement = () => {
                     pagination={{ pageSize: 10 }}
                 />
             </Card>
+
+            <Modal
+                title={`Assign Lecturer for ${selectedOffering?.code}`}
+                open={assignModalVisible}
+                onOk={handleAssignLecturer}
+                onCancel={() => setAssignModalVisible(false)}
+            >
+                <Text>Select Lecturer:</Text>
+                <Select
+                    style={{ width: '100%', marginTop: 8 }}
+                    placeholder="Select a lecturer"
+                    value={selectedLecturerId}
+                    onChange={setSelectedLecturerId}
+                    showSearch
+                    optionFilterProp="children"
+                    allowClear
+                    filterOption={(input, option) =>
+                        (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                >
+                    {lecturers.map(lec => (
+                        <Select.Option key={lec.id} value={lec.id}>
+                            {lec.fullName} ({lec.lecturerCode}) - {lec.faculty?.name}
+                        </Select.Option>
+                    ))}
+                </Select>
+            </Modal>
         </Space>
     );
 };

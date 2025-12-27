@@ -23,6 +23,7 @@ const TimetableView = () => {
     // UI States
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [algorithm, setAlgorithm] = useState('GA');
 
     // Filter States
     const [filters, setFilters] = useState({
@@ -30,7 +31,8 @@ const TimetableView = () => {
         room: null,
         lecturer: null,
         day: null,
-        status: null
+        status: null,
+        classType: null
     });
 
     // 1. Fetch Data
@@ -60,7 +62,9 @@ const TimetableView = () => {
     const handleGenerate = async () => {
         setGenerating(true);
         try {
-            const res = await axiosClient.post('/offerings/generate-schedule');
+            const res = await axiosClient.post('/offerings/generate-schedule', null, {
+                params: { algorithm }
+            });
             message.success(res.data);
             fetchData();
         } catch {
@@ -89,7 +93,10 @@ const TimetableView = () => {
         // Filter by Status
         const matchStatus = !filters.status || item.status === filters.status;
 
-        return matchSearch && matchRoom && matchLecturer && matchDay && matchStatus;
+        // Filter by Class Type
+        const matchType = !filters.classType || item.classType === filters.classType;
+
+        return matchSearch && matchRoom && matchLecturer && matchDay && matchStatus && matchType;
     });
 
     // 4. Table Columns Definition
@@ -98,14 +105,32 @@ const TimetableView = () => {
             title: 'Class Info',
             dataIndex: 'code',
             key: 'code',
-            width: 250,
+            width: 280,
             render: (text, record) => (
                 <div>
-                    <Text strong style={{ color: '#1890ff' }}>{text}</Text>
+                    <Space>
+                        <Text strong style={{ color: '#1890ff' }}>{text}</Text>
+                        {record.classType === 'LT' && <Tag color="blue">LT</Tag>}
+                        {record.classType === 'TH' && <Tag color="cyan">TH</Tag>}
+                        {record.classType === 'ELN' && <Tag color="purple">ELN</Tag>}
+                    </Space>
                     <div style={{ fontSize: '13px', fontWeight: 500 }}>{record.course.name}</div>
                     <Text type="secondary" style={{ fontSize: '12px' }}>{record.targetClasses}</Text>
+                    {record.parent && (
+                        <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                            <span style={{ marginRight: 4 }}>↳</span>
+                            Parent: {record.parent.code}
+                        </div>
+                    )}
                 </div>
             )
+        },
+        {
+            title: 'Semester',
+            dataIndex: ['semester', 'name'],
+            key: 'semester',
+            width: 100,
+            render: (text) => text ? <Tag>{text}</Tag> : '-'
         },
         {
             title: 'Schedule Time',
@@ -178,6 +203,14 @@ const TimetableView = () => {
                     <Text type="secondary">Manage and Monitor all scheduled classes</Text>
                 </div>
                 <Space>
+                    <Select 
+                        value={algorithm}
+                        style={{ width: 190 }}
+                        onChange={setAlgorithm}
+                    >
+                        <Option value="GA">Genetic Algorithm (GA)</Option>
+                        <Option value="HEURISTIC">Heuristic Greedy</Option>
+                    </Select>
                     <Button 
                         type="primary" 
                         icon={<ThunderboltOutlined />} 
@@ -252,6 +285,19 @@ const TimetableView = () => {
                             <Option value="SCHEDULED">Scheduled (OK)</Option>
                             <Option value="ERROR">Error (Conflict)</Option>
                             <Option value="PLANNED">Pending</Option>
+                        </Select>
+                    </Col>
+                    <Col xs={12} sm={4}>
+                        <Select 
+                            placeholder="Type" 
+                            style={{ width: '100%' }} 
+                            allowClear
+                            onChange={(val) => setFilters({ ...filters, classType: val })}
+                        >
+                            <Option value="LT">Lý thuyết (LT)</Option>
+                            <Option value="TH">Thực hành (TH)</Option>
+                            <Option value="ELN">E-Learning (ELN)</Option>
+                            <Option value="ALL">All Types</Option>
                         </Select>
                     </Col>
                 </Row>

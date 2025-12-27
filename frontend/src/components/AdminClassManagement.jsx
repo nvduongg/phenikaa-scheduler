@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Upload, Card, message, Typography, Space, Tag } from 'antd';
-import { UploadOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Button, Upload, Card, message, Typography, Space, Tag, Modal, Form, Input, Select, InputNumber, Popconfirm } from 'antd';
+import { UploadOutlined, DownloadOutlined, ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
 
 const { Title, Text } = Typography;
@@ -8,6 +8,11 @@ const { Title, Text } = Typography;
 const AdminClassManagement = () => {
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editing, setEditing] = useState(null);
+    const [form] = Form.useForm();
+    const [majors, setMajors] = useState([]);
+    const [cohorts, setCohorts] = useState([]);
 
     // Fetch
     const fetchClasses = async () => {
@@ -24,12 +29,18 @@ const AdminClassManagement = () => {
 
     useEffect(() => {
         fetchClasses();
+        fetchMajors();
+        fetchCohorts();
     }, []);
+
+    const fetchMajors = async () => { try { const res = await axiosClient.get('/majors'); setMajors(res.data); } catch {} };
+    const fetchCohorts = async () => { try { const res = await axiosClient.get('/cohorts'); setCohorts(res.data); } catch {} };
 
     // Upload
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/admin-classes/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
@@ -87,7 +98,34 @@ const AdminClassManagement = () => {
             width: 100,
             render: (size) => <Tag color="default">{size}</Tag>
         }
+        ,{
+            title: 'Actions', key: 'actions', width: 180, render: (_, record) => (
+                <Space>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
+                    <Popconfirm title="Delete this class?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    </Popconfirm>
+                </Space>
+            )
+        }
     ];
+
+    const openCreate = () => { setEditing(null); form.resetFields(); setModalVisible(true); };
+
+    const onEdit = (record) => { setEditing(record); form.setFieldsValue({ name: record.name, code: record.code, major: record.major?.id, cohort: record.cohort?.id, size: record.size }); setModalVisible(true); };
+
+    const onDelete = async (id) => { try { await axiosClient.delete(`/admin-classes/${id}`); message.success('Deleted'); fetchClasses(); } catch { message.error('Delete failed'); } };
+
+    const onFinish = async (values) => {
+        try {
+            const payload = { ...values };
+            if (values.major) payload.major = { id: values.major };
+            if (values.cohort) payload.cohort = { id: values.cohort };
+            if (editing) { await axiosClient.put(`/admin-classes/${editing.id}`, payload); message.success('Updated'); }
+            else { await axiosClient.post('/admin-classes', payload); message.success('Created'); }
+            setModalVisible(false); fetchClasses();
+        } catch { message.error('Save failed'); }
+    };
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -100,6 +138,7 @@ const AdminClassManagement = () => {
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
                         Template
                     </Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
                     <Upload {...uploadProps}>
                         <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
                     </Upload>
@@ -113,9 +152,33 @@ const AdminClassManagement = () => {
                     columns={columns} 
                     dataSource={classes} 
                     loading={loading}
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 8 }}
                 />
             </Card>
+
+            <Modal title={editing ? 'Edit Class' : 'Create Class'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+                <Form form={form} layout="vertical" onFinish={onFinish}>
+                    <Form.Item name="name" label="Class Name" rules={[{ required: true }]}>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="code" label="Class Code">
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="major" label="Major" rules={[{ required: true }]}>
+                        <Select>
+                            {majors.map(m => <Select.Option key={m.id} value={m.id}>{m.name}</Select.Option>)}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="cohort" label="Cohort" rules={[{ required: true }]}>
+                        <Select>
+                            {cohorts.map(c => <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>)}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="size" label="Size">
+                        <InputNumber style={{ width: '100%' }} />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </Space>
     );
 };

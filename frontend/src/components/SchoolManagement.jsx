@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Upload, Card, message, Typography, Space, Tag } from 'antd';
-import { UploadOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Button, Upload, Card, message, Typography, Space, Tag, Modal, Form, Input, Popconfirm } from 'antd';
+import { UploadOutlined, DownloadOutlined, ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
 
 const { Title, Text } = Typography;
@@ -8,6 +8,9 @@ const { Title, Text } = Typography;
 const SchoolManagement = () => {
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editing, setEditing] = useState(null);
+    const [form] = Form.useForm();
 
     const fetchSchools = async () => {
         setLoading(true);
@@ -28,6 +31,7 @@ const SchoolManagement = () => {
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/schools/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
@@ -68,7 +72,58 @@ const SchoolManagement = () => {
             key: 'name',
             render: (text) => <Text strong style={{ fontSize: '15px' }}>{text}</Text>
         }
+        ,{
+            title: 'Actions',
+            key: 'actions',
+            width: 150,
+            render: (_, record) => (
+                <Space>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)}>Edit</Button>
+                    <Popconfirm title="Delete this school?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger icon={<DeleteOutlined />} size="small">Delete</Button>
+                    </Popconfirm>
+                </Space>
+            )
+        }
     ];
+
+    const openCreate = () => {
+        setEditing(null);
+        form.resetFields();
+        setModalVisible(true);
+    };
+
+    const onEdit = (record) => {
+        setEditing(record);
+        form.setFieldsValue({ name: record.name, code: record.code });
+        setModalVisible(true);
+    };
+
+    const onDelete = async (id) => {
+        try {
+            await axiosClient.delete(`/schools/${id}`);
+            message.success('Deleted');
+            fetchSchools();
+        } catch {
+            message.error('Delete failed');
+        }
+    };
+
+    const onFinish = async (values) => {
+        try {
+            if (editing) {
+                await axiosClient.put(`/schools/${editing.id}`, values);
+                message.success('Updated');
+            } else {
+                await axiosClient.post('/schools', values);
+                message.success('Created');
+            }
+            setModalVisible(false);
+            fetchSchools();
+        } catch (e) {
+            message.error('Save failed');
+        }
+    };
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
@@ -81,6 +136,7 @@ const SchoolManagement = () => {
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
                         Template
                     </Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
                     <Upload {...uploadProps}>
                         <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
                     </Upload>
@@ -97,6 +153,23 @@ const SchoolManagement = () => {
                     pagination={{ pageSize: 8 }}
                 />
             </Card>
+
+            <Modal
+                title={editing ? 'Edit School' : 'Create School'}
+                open={modalVisible}
+                onCancel={() => setModalVisible(false)}
+                onOk={() => form.submit()}
+                destroyOnClose
+            >
+                <Form form={form} layout="vertical" onFinish={onFinish}>
+                    <Form.Item name="code" label="School Code" rules={[{ required: true }]}>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="name" label="School Name" rules={[{ required: true }]}>
+                        <Input />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </Space>
     );
 };

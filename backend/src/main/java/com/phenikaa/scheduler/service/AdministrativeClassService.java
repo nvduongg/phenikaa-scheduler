@@ -29,6 +29,54 @@ public class AdministrativeClassService {
         return adminClassRepo.findAll();
     }
 
+    public List<AdministrativeClass> getClassesBySchoolId(Long schoolId) {
+        return adminClassRepo.findByMajorFacultySchoolId(schoolId);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<AdministrativeClass> getClassById(Long id) {
+        return adminClassRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public AdministrativeClass createClass(AdministrativeClass adminClass) {
+        // Resolve Major and Cohort associations if IDs provided
+        if (adminClass.getMajor() != null && adminClass.getMajor().getId() != null) {
+            majorRepo.findById(adminClass.getMajor().getId()).ifPresent(adminClass::setMajor);
+        }
+        if (adminClass.getCohort() != null && adminClass.getCohort().getId() != null) {
+            cohortRepo.findById(adminClass.getCohort().getId()).ifPresent(adminClass::setCohort);
+        }
+        return adminClassRepo.save(adminClass);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<AdministrativeClass> updateClass(Long id, AdministrativeClass updated) {
+        return adminClassRepo.findById(id).map(c -> {
+            c.setName(updated.getName());
+            c.setCode(updated.getCode());
+            if (updated.getMajor() != null) {
+                if (updated.getMajor().getId() != null) majorRepo.findById(updated.getMajor().getId()).ifPresent(c::setMajor);
+                else if (updated.getMajor().getCode() != null) majorRepo.findByCode(updated.getMajor().getCode()).ifPresent(c::setMajor);
+            }
+            if (updated.getCohort() != null) {
+                if (updated.getCohort().getId() != null) cohortRepo.findById(updated.getCohort().getId()).ifPresent(c::setCohort);
+                else if (updated.getCohort().getName() != null) cohortRepo.findByName(updated.getCohort().getName()).ifPresent(c::setCohort);
+            }
+            c.setSize(updated.getSize());
+            return adminClassRepo.save(c);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteClass(Long id) {
+        if (adminClassRepo.existsById(id)) {
+            adminClassRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public String importClassesExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
@@ -89,6 +137,7 @@ public class AdministrativeClassService {
         return "Import completed! Success: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

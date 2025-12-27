@@ -2,12 +2,14 @@ package com.phenikaa.scheduler.controller;
 
 import com.phenikaa.scheduler.model.Major;
 import com.phenikaa.scheduler.service.MajorService;
+import com.phenikaa.scheduler.security.services.UserDetailsImpl;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -23,8 +25,37 @@ public class MajorController {
     @Autowired private MajorService majorService;
 
     @GetMapping
-    public ResponseEntity<List<Major>> getAllMajors() {
+    public ResponseEntity<List<Major>> getAllMajors(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            if (userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN_SCHOOL"))) {
+                if (userDetails.getSchoolId() != null) {
+                    return ResponseEntity.ok(majorService.getMajorsBySchoolId(userDetails.getSchoolId()));
+                }
+            }
+        }
         return ResponseEntity.ok(majorService.getAllMajors());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Major> getMajorById(@PathVariable Long id) {
+        return majorService.getMajorById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Major> createMajor(@RequestBody Major major) {
+        return ResponseEntity.ok(majorService.createMajor(major));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Major> updateMajor(@PathVariable Long id, @RequestBody Major major) {
+        return majorService.updateMajor(id, major).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMajor(@PathVariable Long id) {
+        if (majorService.deleteMajor(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Layout, Menu, Dropdown, Space, Typography, theme, Button } from 'antd';
 import { 
     BankOutlined, 
@@ -26,72 +26,141 @@ import ExpertiseManagement from './components/ExpertiseManagement';
 import RoomManagement from './components/RoomManagement';
 import TimetableView from './components/TimetableView';
 import SemesterManagement from './components/SemesterManagement';
+import LoginPage from './pages/LoginPage';
 
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
 
-const App = () => {
-    const [selectedKey, setSelectedKey] = useState('0');
-    const [currentCurriculum, setCurrentCurriculum] = useState(null);
-    
-    const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
-
-    // Định nghĩa độ rộng chuẩn cho toàn bộ trang web để mọi thứ thẳng hàng
-    const CONTENT_WIDTH = '1400px'; 
-
-    const menuItems = [
-        {
-            key: 'grp_org',
-            label: 'Organization',
-            icon: <BankOutlined />,
-            children: [
-                { key: '0', label: 'Schools' },
-                { key: '1', label: 'Faculties' },
-                { key: '5', label: 'Majors' },
-                { key: '6', label: 'Cohorts' },
-                { key: '7', label: 'Admin Classes' },
-            ],
-        },
-        {
-          key: 'grp_res',
-          label: 'Resources', // Nhóm mới
-          icon: <UserOutlined />,
-          children: [
-              { key: '10', label: 'Lecturers' }, // <-- Thêm vào đây (Key 10)
-              { key: '11', label: 'Expertise (Mapping)' },
-              { key: '12', label: 'Rooms' },
-          ],
-        },
-        {
-            key: 'grp_curr',
-            label: 'Curriculum & Planning',
-            icon: <BookOutlined />,
-            children: [
-                { key: '8', label: 'Curricula (Programs)' },
-                { key: '2', label: 'Courses' },
-                { key: '3', label: 'Course Offerings' },
-            ],
-        },
-        {
-            key: '4',
-            label: 'Timetable View',
-            icon: <CalendarOutlined />,
-        },
-        {
-          key: 'grp_sys',
-          label: 'System & Settings',
-          icon: <SettingOutlined />, // Import icon này
-          children: [
-              { key: '99', label: 'Semester Settings' },
-          ],
-       },
-    ];
-
-    const userMenu = {
-        items: [
-            { key: 'profile', label: 'My Profile', icon: <UserOutlined /> },
-            { key: 'logout', label: 'Logout', icon: <LogoutOutlined />, danger: true },
+// --- 1. CHUYỂN DỮ LIỆU TĨNH RA NGOÀI COMPONENT ---
+// Để tránh việc khởi tạo lại mảng này mỗi lần render
+const allMenuItems = [
+    {
+        key: 'grp_org',
+        label: 'Organization',
+        icon: <BankOutlined />,
+        roles: ['ADMIN', 'ADMIN_SCHOOL'], // Chỉ Admin Đại học mới được sửa cấu trúc trường
+        children: [
+            { key: '0', label: 'Schools' },
+            { key: '1', label: 'Faculties' },
+            { key: '5', label: 'Majors' },
+            { key: '6', label: 'Cohorts' },
+            { key: '7', label: 'Admin Classes' },
         ],
+    },
+    {
+      key: 'grp_res',
+      label: 'Resources',
+      icon: <UserOutlined />,
+      // Ai cũng cần quản lý giảng viên của cấp mình
+      roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'], 
+      children: [
+          { key: '10', label: 'Lecturers' }, 
+          { key: '11', label: 'Expertise' },
+          { key: '12', label: 'Rooms', roles: ['ADMIN'] },
+      ],
+    },
+    {
+        key: 'grp_curr',
+        label: 'Curriculum & Planning',
+        icon: <BookOutlined />,
+        roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'],
+        children: [
+            // Khung chương trình: Chỉ cấp Trường trở lên mới xem/sửa
+            { key: '8', label: 'Curricula', roles: ['ADMIN', 'ADMIN_SCHOOL'] },
+            { key: '2', label: 'Courses', roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'] },
+            
+            // Mở lớp: Cả 3 cấp đều cần vào (Khoa nhập, Trường duyệt, ĐH xếp)
+            { key: '3', label: 'Course Offerings', roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'] },
+        ],
+    },
+    {
+        key: '4',
+        label: 'Timetable View',
+        icon: <CalendarOutlined />,
+        roles: ['ADMIN', 'ADMIN_SCHOOL', 'ADMIN_FACULTY'],
+    },
+    {
+      key: 'grp_sys',
+      label: 'System Settings',
+      icon: <SettingOutlined />, 
+      roles: ['ADMIN'], // Chỉ Super Admin
+      children: [
+          { key: '99', label: 'Semester Settings' },
+      ],
+   },
+];
+
+// --- 2. CHUYỂN HÀM UTILITY RA NGOÀI ---
+const filterMenuByRole = (items, role) => {
+    return items
+        .filter(item => {
+            // Nếu item không quy định roles -> Ai cũng thấy
+            // Nếu có quy định -> Check xem role hiện tại có trong list không
+            return !item.roles || item.roles.includes(role);
+        })
+        .map(item => {
+            // Nếu có con, lọc tiếp các con
+            if (item.children) {
+                return { ...item, children: filterMenuByRole(item.children, role) };
+            }
+            return item;
+        })
+        .filter(item => {
+            // Sau khi lọc con, nếu Group đó rỗng thì ẩn luôn Group cha
+            if (item.children && item.children.length === 0) return false;
+            return true;
+        });
+};
+
+const App = () => {
+    // Lấy user từ localStorage khi load trang
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+    
+    // State cho Navigation
+    const [selectedKey, setSelectedKey] = useState(() => {
+        if (user && user.role === 'ADMIN_FACULTY') return '3';
+        return '0';
+    });
+    const [currentCurriculum, setCurrentCurriculum] = useState(null);
+
+    // --- 3. DÙNG useMemo ĐỂ TÍNH TOÁN MENU (THAY VÌ useEffect + useState) ---
+    // authorizedMenuItems sẽ tự động cập nhật ngay khi user thay đổi
+    const authorizedMenuItems = useMemo(() => {
+        if (!user) return [];
+        return filterMenuByRole(allMenuItems, user.role);
+    }, [user]); // Chỉ tính lại khi user thay đổi
+
+    const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
+    const CONTENT_WIDTH = '1400px';
+
+    // --- LOGIC LOGIN / LOGOUT ---
+
+    const handleLoginSuccess = (userData) => {
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        if (userData.role === 'ADMIN_FACULTY') {
+            setSelectedKey('3');
+        } else {
+            setSelectedKey('0');
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        window.location.reload();
+    };
+
+    // Nếu chưa đăng nhập
+    if (!user) {
+        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    }
+
+    // --- LOGIC RENDER CONTENT ---
+    
+    const handleMenuClick = (e) => {
+        if (e.key === 'logout') {
+            handleLogout();
+        }
     };
 
     const handleNavigateToRoadmap = (curriculum) => {
@@ -105,6 +174,9 @@ const App = () => {
     };
 
     const renderContent = () => {
+        // Bảo vệ route ở client: Nếu user cố tình sửa key mà không có quyền
+        // (Đây là bảo vệ giao diện, bảo vệ dữ liệu thực sự nằm ở Backend API)
+        
         switch (selectedKey) {
             case '0': return <SchoolManagement />;
             case '1': return <FacultyManagement />;
@@ -119,34 +191,27 @@ const App = () => {
             case '8': return <CurriculumManagement onNavigate={handleNavigateToRoadmap} />;
             case '9': return <RoadmapManagement targetCurriculum={currentCurriculum} onBack={handleBackToCurricula} />;
             case '2': return <CourseManagement />;
-            case '3': return <OfferingManagement />;
+            // Truyền user xuống OfferingManagement để nó biết ID Khoa
+            case '3': return <OfferingManagement user={user} />; 
 
             case '99': return <SemesterManagement />;
             case '4': return <TimetableView />;
+            default: return <div>Select a menu item</div>;
         }
+    };
+
+    const userMenu = {
+        items: [
+            { key: 'profile', label: 'My Profile', icon: <UserOutlined /> },
+            { key: 'logout', label: 'Logout', icon: <LogoutOutlined />, danger: true },
+        ],
+        onClick: handleMenuClick,
     };
 
     return (
         <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-            {/* --- HEADER 1: Top Bar (System Name & User) --- */}
-            <Header style={{ 
-                height: '40px', 
-                lineHeight: '40px', 
-                background: '#003a70', 
-                padding: 0, // Reset padding mặc định của Antd
-                color: 'white',
-                zIndex: 2
-            }}>
-                {/* Container căn giữa */}
-                <div style={{ 
-                    maxWidth: CONTENT_WIDTH, 
-                    margin: '0 auto', 
-                    padding: '0 20px', 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    height: '100%'
-                }}>
+            <Header style={{ height: '40px', lineHeight: '40px', background: '#003a70', padding: 0, color: 'white', zIndex: 2 }}>
+                <div style={{ maxWidth: CONTENT_WIDTH, margin: '0 auto', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
                     <Text style={{ color: 'white', fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
                         UNIVERSITY TIMETABLING SYSTEM
                     </Text>
@@ -154,7 +219,7 @@ const App = () => {
                         <Dropdown menu={userMenu} placement="bottomRight">
                             <a onClick={(e) => e.preventDefault()} style={{ cursor: 'pointer' }}>
                                 <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: '12px', fontWeight: 'bold' }}>
-                                    Welcome, Admin
+                                    Welcome, {user.fullName || user.username} ({user.role})
                                 </Text>
                             </a>
                         </Dropdown>
@@ -162,67 +227,30 @@ const App = () => {
                 </div>
             </Header>
 
-            {/* --- HEADER 2: Main Navigation (Logo & Menu) --- */}
-            <Header style={{ 
-                background: colorBgContainer, 
-                padding: 0, 
-                boxShadow: '0 2px 8px #f0f1f2', 
-                height: '64px',
-                zIndex: 1
-            }}>
-                {/* Container căn giữa - Thẳng hàng với Header trên và Content dưới */}
-                <div style={{ 
-                    maxWidth: CONTENT_WIDTH, 
-                    margin: '0 auto', 
-                    padding: '0 20px', 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    height: '100%'
-                }}>
-                    {/* LOGO (Bên Trái) */}
+            <Header style={{ background: colorBgContainer, padding: 0, boxShadow: '0 2px 8px #f0f1f2', height: '64px', zIndex: 1 }}>
+                <div style={{ maxWidth: CONTENT_WIDTH, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: '100%' }}>
                     <div style={{ display: 'flex', alignItems: 'center', minWidth: '250px' }}>
                         <img src={logo} alt="Phenikaa University" style={{ height: '48px' }} />
                     </div>
-
-                    {/* MENU (Đẩy sang Bên Phải) */}
-                    {/* flex: 1 và justifyContent: 'flex-end' sẽ đẩy menu sang phải */}
                     <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', marginRight: '-16px' }}>
                         <Menu
                             mode="horizontal"
-                            defaultSelectedKeys={['0']}
                             selectedKeys={[selectedKey]}
-                            items={menuItems}
+                            // Sử dụng danh sách menu đã lọc
+                            items={authorizedMenuItems}
                             onClick={(e) => {
                                 setSelectedKey(e.key);
                                 setCurrentCurriculum(null);
                             }}
-                            style={{ 
-                                borderBottom: 'none', 
-                                width: '100%', 
-                                justifyContent: 'flex-end', // Quan trọng: Căn các item trong menu sang phải
-                                fontSize: '14px',
-                                fontWeight: 500
-                            }}
+                            style={{ borderBottom: 'none', width: '100%', justifyContent: 'flex-end', fontSize: '14px', fontWeight: 500 }}
                         />
                     </div>
                 </div>
             </Header>
 
-            {/* --- CONTENT AREA --- */}
             <Content style={{ padding: '24px 0' }}>
-                {/* Container căn giữa - Thẳng hàng với Headers */}
-                <div style={{ 
-                    maxWidth: CONTENT_WIDTH, 
-                    margin: '0 auto', 
-                    padding: '0 20px' // Padding ngang để nội dung không dính sát mép khi màn hình nhỏ
-                }}>
-                    <div style={{ 
-                        padding: 24, 
-                        minHeight: 500, 
-                        background: colorBgContainer, 
-                        borderRadius: borderRadiusLG,
-                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)' 
-                    }}>
+                <div style={{ maxWidth: CONTENT_WIDTH, margin: '0 auto', padding: '0 20px' }}>
+                    <div style={{ padding: 24, minHeight: 500, background: colorBgContainer, borderRadius: borderRadiusLG, boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)' }}>
                         {renderContent()}
                     </div>
                 </div>

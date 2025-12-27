@@ -27,6 +27,28 @@ public class CourseController {
         return ResponseEntity.ok(courseService.getAllCourses());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Course> getCourseById(@PathVariable Long id) {
+        return courseService.getCourseById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Course> createCourse(@RequestBody Course course) {
+        Course created = courseService.createCourse(course);
+        return ResponseEntity.ok(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Course> updateCourse(@PathVariable Long id, @RequestBody Course course) {
+        return courseService.updateCourse(id, course).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCourse(@PathVariable Long id) {
+        if (courseService.deleteCourse(id)) return ResponseEntity.noContent().build();
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> importCourses(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.badRequest().body("File không được để trống");
@@ -46,7 +68,8 @@ public class CourseController {
                 "Credits", 
                 "Theory Credits", 
                 "Practice Credits", 
-                "Managing Faculty Code"
+                "Managing Faculty Code",
+                "Managing School Code"
             };
 
             CellStyle style = workbook.createCellStyle();
@@ -65,10 +88,24 @@ public class CourseController {
             Row sample = sheet.createRow(1);
             sample.createCell(0).setCellValue("CSE702011");
             sample.createCell(1).setCellValue("Java Programming");
-            sample.createCell(2).setCellValue(3);
-            sample.createCell(3).setCellValue(2);
-            sample.createCell(4).setCellValue(1);
+            sample.createCell(2).setCellValue(3.0);
+            sample.createCell(3).setCellValue(2.0);
+            sample.createCell(4).setCellValue(1.0);
             sample.createCell(5).setCellValue("F_SE"); // Mã khoa quản lý
+            sample.createCell(6).setCellValue(""); // Mã trường (để trống nếu đã có khoa)
+
+            Row sample2 = sheet.createRow(2);
+            sample2.createCell(0).setCellValue("PHX101");
+            sample2.createCell(1).setCellValue("Phenikaa Life");
+            sample2.createCell(2).setCellValue(2.5); // Ví dụ số lẻ
+            sample2.createCell(3).setCellValue(1.5);
+            sample2.createCell(4).setCellValue(1.0);
+            sample2.createCell(5).setCellValue("");
+            sample2.createCell(6).setCellValue("PHX"); // Mã trường quản lý
+            sample2.createCell(3).setCellValue(2);
+            sample2.createCell(4).setCellValue(0);
+            sample2.createCell(5).setCellValue("");
+            sample2.createCell(6).setCellValue("PHX"); // Mã trường quản lý
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);

@@ -39,7 +39,7 @@ public class CurriculumDetailController {
             Sheet sheet = workbook.createSheet("Roadmap");
 
             Row header = sheet.createRow(0);
-            String[] cols = {"Curriculum Name", "Course Code", "Semester Index (1-10)"};
+            String[] cols = {"Curriculum Name", "Course Code", "Semester Index (e.g. 1 or 1,2)"};
 
             CellStyle style = workbook.createCellStyle();
             Font font = workbook.createFont();
@@ -57,7 +57,12 @@ public class CurriculumDetailController {
             Row sample = sheet.createRow(1);
             sample.createCell(0).setCellValue("CTĐT K17 CNTT");
             sample.createCell(1).setCellValue("CSE702011");
-            sample.createCell(2).setCellValue(3); // Học kỳ 3
+            sample.createCell(2).setCellValue("3"); // Học kỳ 3
+
+            Row sample2 = sheet.createRow(2);
+            sample2.createCell(0).setCellValue("CTĐT K17 CNTT");
+            sample2.createCell(1).setCellValue("PHX101");
+            sample2.createCell(2).setCellValue("1,2"); // Học kỳ 1 hoặc 2
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);

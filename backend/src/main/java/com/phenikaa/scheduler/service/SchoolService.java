@@ -22,6 +22,34 @@ public class SchoolService {
         return schoolRepo.findAll();
     }
 
+    @SuppressWarnings("null")
+    public java.util.Optional<School> getSchoolById(Long id) {
+        return schoolRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public School createSchool(School school) {
+        return schoolRepo.save(school);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<School> updateSchool(Long id, School updated) {
+        return schoolRepo.findById(id).map(s -> {
+            s.setCode(updated.getCode());
+            s.setName(updated.getName());
+            return schoolRepo.save(s);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteSchool(Long id) {
+        if (schoolRepo.existsById(id)) {
+            schoolRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public String importSchoolsExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
@@ -61,6 +89,7 @@ public class SchoolService {
         return "Import xong! Thành công: " + successCount + ". Lỗi: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

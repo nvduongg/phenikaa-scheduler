@@ -29,6 +29,7 @@ const CurriculumManagement = ({ onNavigate }) => {
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/curricula/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {

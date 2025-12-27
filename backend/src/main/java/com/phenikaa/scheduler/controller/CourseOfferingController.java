@@ -18,10 +18,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/api/v1/offerings")
-@CrossOrigin(origins = "http://localhost:5173") // Cấu hình cho phép React (Vite) truy cập
+@CrossOrigin(origins = "http://localhost:5173")
 public class CourseOfferingController {
 
     @Autowired
@@ -37,34 +36,39 @@ public class CourseOfferingController {
         return ResponseEntity.ok(offeringService.getAllOfferings());
     }
 
+    @PutMapping("/{id}/lecturer")
+    public ResponseEntity<CourseOffering> assignLecturer(@PathVariable Long id, @RequestParam(required = false) Long lecturerId) {
+        return ResponseEntity.ok(offeringService.assignLecturer(id, lecturerId));
+    }
+
     // API 2: Import dữ liệu từ file Excel (.xlsx)
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> importOfferings(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Vui lòng chọn file Excel để upload!");
         }
-
-        // Gọi service xử lý file Excel
-        // Lưu ý: Đảm bảo bạn đã update method importCourseOfferingsExcel trong Service như bước trước
+        // Service đã được cập nhật logic 2 vòng lặp (Parent trước, Child sau)
         String result = offeringService.importCourseOfferingsExcel(file);
-        
         return ResponseEntity.ok(result);
     }
 
-    // API 3: Tải file Excel mẫu (Template)
+    // API 3: Tải file Excel mẫu (CẬP NHẬT CẤU TRÚC MỚI)
     @GetMapping("/template")
     public ResponseEntity<byte[]> downloadTemplate() throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Offering Plan");
 
             Row header = sheet.createRow(0);
-            // Header tiếng Anh chuẩn cho Input
+            
+            // --- CẬP NHẬT HEADER (7 CỘT) ---
             String[] cols = {
-                "Class Code (Unique)", 
-                "Course Code", 
-                "Planned Size", 
-                "Target Classes (e.g., K17-CNTT-01)", 
-                "Fixed Lecturer Code (Optional)"
+                "Class Code (Unique)",       // Col 0
+                "Course Code",               // Col 1
+                "Planned Size",              // Col 2
+                "Target Classes",            // Col 3
+                "Fixed Lecturer (Optional)", // Col 4
+                "Type (LT / TH / ALL)",      // Col 5 (Mới)
+                "Parent Code (For TH)"       // Col 6 (Mới)
             };
 
             CellStyle style = workbook.createCellStyle();
@@ -76,22 +80,56 @@ public class CourseOfferingController {
                 Cell cell = header.createCell(i);
                 cell.setCellValue(cols[i]);
                 cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 30 * 256);
+                sheet.setColumnWidth(i, 25 * 256); // Độ rộng cột
             }
 
-            // Sample Data
-            Row sample = sheet.createRow(1);
-            sample.createCell(0).setCellValue("2025_JAVA_01");
-            sample.createCell(1).setCellValue("CSE702011");
-            sample.createCell(2).setCellValue(60);
-            sample.createCell(3).setCellValue("K17-CNTT-01; K17-CNTT-02");
-            sample.createCell(4).setCellValue("GV001"); // Có thể để trống nếu muốn máy tự xếp GV
+            // --- DỮ LIỆU MẪU (SAMPLE DATA) ---
+            
+            // Mẫu 1: Lớp Lý thuyết (Lớp Mẹ)
+            Row row1 = sheet.createRow(1);
+            row1.createCell(0).setCellValue("2025_JAVA_01");
+            row1.createCell(1).setCellValue("CSE702011");
+            row1.createCell(2).setCellValue(80);
+            row1.createCell(3).setCellValue("K17-CNTT-01");
+            row1.createCell(4).setCellValue("");
+            row1.createCell(5).setCellValue("LT"); // Đánh dấu là Lý thuyết
+            row1.createCell(6).setCellValue("");   // LT không có cha
+
+            // Mẫu 2: Lớp Thực hành 1 (Lớp Con)
+            Row row2 = sheet.createRow(2);
+            row2.createCell(0).setCellValue("2025_JAVA_01.1");
+            row2.createCell(1).setCellValue("CSE702011");
+            row2.createCell(2).setCellValue(40);
+            row2.createCell(3).setCellValue("K17-CNTT-01");
+            row2.createCell(4).setCellValue("");
+            row2.createCell(5).setCellValue("TH"); // Đánh dấu là Thực hành
+            row2.createCell(6).setCellValue("2025_JAVA_01"); // TRỎ VỀ MÃ CỦA DÒNG 1
+
+            // Mẫu 3: Lớp Thực hành 2 (Lớp Con)
+            Row row3 = sheet.createRow(3);
+            row3.createCell(0).setCellValue("2025_JAVA_01.2");
+            row3.createCell(1).setCellValue("CSE702011");
+            row3.createCell(2).setCellValue(40);
+            row3.createCell(3).setCellValue("K17-CNTT-01");
+            row3.createCell(4).setCellValue("");
+            row3.createCell(5).setCellValue("TH");
+            row3.createCell(6).setCellValue("2025_JAVA_01"); // TRỎ VỀ MÃ CỦA DÒNG 1
+            
+            // Mẫu 4: Môn Online/Đại trà (Gộp chung)
+            Row row4 = sheet.createRow(4);
+            row4.createCell(0).setCellValue("2025_LAW_01");
+            row4.createCell(1).setCellValue("LAW101");
+            row4.createCell(2).setCellValue(200);
+            row4.createCell(3).setCellValue("K17-ALL");
+            row4.createCell(4).setCellValue("");
+            row4.createCell(5).setCellValue("ELN"); // Hoặc ALL
+            row4.createCell(6).setCellValue("");
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Offering_Plan_Template.xlsx")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Offering_Plan_Template_v2.xlsx")
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(out.toByteArray());
         }
@@ -104,10 +142,11 @@ public class CourseOfferingController {
         return ResponseEntity.ok(result);
     }
 
+    // API Trigger Scheduling
     @PostMapping("/generate-schedule")
-    public ResponseEntity<String> generateSchedule() {
+    public ResponseEntity<String> generateSchedule(@RequestParam(defaultValue = "GA") String algorithm) {
         long startTime = System.currentTimeMillis();
-        String result = schedulerService.generateSchedule();
+        String result = schedulerService.generateSchedule(algorithm);
         long duration = System.currentTimeMillis() - startTime;
         return ResponseEntity.ok(result + " (Time: " + duration + "ms)");
     }

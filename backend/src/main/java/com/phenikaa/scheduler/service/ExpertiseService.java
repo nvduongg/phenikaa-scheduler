@@ -75,6 +75,7 @@ public class ExpertiseService {
         return "Import completed! Mapped: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);

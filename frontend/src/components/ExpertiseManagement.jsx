@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Upload, Card, message, Typography, Space, Tag } from 'antd';
-import { UploadOutlined, DownloadOutlined, ReloadOutlined, UserOutlined, BookOutlined } from '@ant-design/icons';
+import { Table, Button, Upload, Card, message, Typography, Space, Tag, Avatar, Modal, Select, Form, Tooltip, Input } from 'antd';
+import { UploadOutlined, DownloadOutlined, ReloadOutlined, UserOutlined, BookOutlined, EditOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 const ExpertiseManagement = () => {
-    const [lecturers, setLecturers] = useState([]); // Chúng ta dùng lại API lecturers vì nó đã kèm list courses
+    const [lecturers, setLecturers] = useState([]);
+    const [allCourses, setAllCourses] = useState([]); // List toàn bộ môn để chọn
     const [loading, setLoading] = useState(false);
+    
+    // State cho Modal Edit
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentLecturer, setCurrentLecturer] = useState(null);
+    
+    // Search & Selection
+    const [searchText, setSearchText] = useState('');
+    const [selectedCourseIds, setSelectedCourseIds] = useState([]);
 
+    // Fetch Lecturers
     const fetchExpertise = async () => {
         setLoading(true);
         try {
             const res = await axiosClient.get('/lecturers');
-            // Lọc ra những giảng viên có chuyên môn để hiển thị lên đầu (tùy chọn)
             setLecturers(res.data);
         } catch {
             message.error("Failed to fetch expertise data");
@@ -22,13 +32,53 @@ const ExpertiseManagement = () => {
         }
     };
 
+    // Fetch All Courses (Để nạp vào dropdown chọn)
+    const fetchCourses = async () => {
+        try {
+            const res = await axiosClient.get('/courses');
+            setAllCourses(res.data);
+        } catch {
+            console.error("Failed to load courses");
+        }
+    };
+
     useEffect(() => {
         fetchExpertise();
+        fetchCourses();
     }, []);
 
+    // Xử lý khi bấm nút Edit
+    const handleEdit = (record) => {
+        setCurrentLecturer(record);
+        // Lấy danh sách ID môn hiện tại
+        const currentIds = record.teachingCourses.map(c => c.id);
+        setSelectedCourseIds(currentIds);
+        setSearchText('');
+        setIsModalOpen(true);
+    };
+
+    // Xử lý lưu thay đổi
+    const handleSave = async () => {
+        try {
+            // Map IDs to Codes
+            const codes = allCourses
+                .filter(c => selectedCourseIds.includes(c.id))
+                .map(c => c.courseCode);
+
+            await axiosClient.put(`/lecturers/${currentLecturer.id}/expertise`, codes);
+            message.success("Expertise updated for " + currentLecturer.fullName);
+            setIsModalOpen(false);
+            fetchExpertise(); 
+        } catch {
+            message.error("Update failed");
+        }
+    };
+
+    // ... (Giữ nguyên phần Upload và Template cũ) ...
     const uploadProps = {
         name: 'file',
         action: 'http://localhost:8080/api/v1/expertise/import',
+        headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('user'))?.token}` },
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
@@ -54,6 +104,7 @@ const ExpertiseManagement = () => {
             message.error("Failed to download template");
         }
     };
+    // ... (Hết phần cũ) ...
 
     const columns = [
         {
@@ -61,35 +112,49 @@ const ExpertiseManagement = () => {
             key: 'lecturer',
             width: 250,
             render: (record) => (
-                <div>
-                    <div style={{ fontWeight: 600 }}>{record.fullName}</div>
-                    <div style={{ fontSize: '12px', color: '#888' }}>{record.lecturerCode}</div>
-                </div>
+                <Space>
+                    <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                    <div>
+                        <div style={{ fontWeight: 600 }}>{record.fullName}</div>
+                        <div style={{ fontSize: '12px', color: '#888' }}>{record.lecturerCode}</div>
+                    </div>
+                </Space>
             )
         },
         {
             title: 'Faculty',
             dataIndex: ['faculty', 'name'],
             key: 'faculty',
-            width: 200,
+            width: 150,
             render: (text) => <Tag color="purple">{text}</Tag>
         },
         {
-            title: 'Teaching Capabilities (Expertise)',
+            title: 'Teaching Capabilities',
             dataIndex: 'teachingCourses',
             key: 'courses',
             render: (courses) => (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {courses && courses.length > 0 ? (
-                        courses.map(course => (
-                            <Tag key={course.courseCode} color="blue" icon={<BookOutlined />}>
-                                {course.name} <span style={{ opacity: 0.6 }}>({course.courseCode})</span>
-                            </Tag>
-                        ))
-                    ) : (
-                        <Text type="secondary" italic>No expertise assigned yet</Text>
-                    )}
+                    {courses && courses.map(course => (
+                        <Tag key={course.courseCode} color="blue">
+                            {course.name}
+                        </Tag>
+                    ))}
                 </div>
+            )
+        },
+        {
+            title: 'Action',
+            key: 'action',
+            width: 80,
+            align: 'center',
+            render: (_, record) => (
+                <Tooltip title="Edit Expertise">
+                    <Button 
+                        type="text" 
+                        icon={<EditOutlined />} 
+                        onClick={() => handleEdit(record)} // Gọi hàm mở modal
+                    />
+                </Tooltip>
             )
         }
     ];
@@ -121,6 +186,44 @@ const ExpertiseManagement = () => {
                     pagination={{ pageSize: 8 }}
                 />
             </Card>
+
+            {/* Modal Edit Expertise */}
+            <Modal
+                title={`Edit Expertise: ${currentLecturer?.fullName || ''}`}
+                open={isModalOpen}
+                onCancel={() => setIsModalOpen(false)}
+                onOk={handleSave}
+                width={800}
+                bodyStyle={{ padding: 0 }}
+            >
+                <div style={{ padding: 16 }}>
+                    <Input.Search 
+                        placeholder="Search by code or name..." 
+                        onChange={e => setSearchText(e.target.value)} 
+                        style={{ marginBottom: 16 }}
+                    />
+                    <Table
+                        rowKey="id"
+                        columns={[
+                            { title: 'Code', dataIndex: 'courseCode', width: 120 },
+                            { title: 'Name', dataIndex: 'name' },
+                            { title: 'Credits', dataIndex: 'credits', width: 80 },
+                        ]}
+                        dataSource={allCourses.filter(c => 
+                            c.courseCode.toLowerCase().includes(searchText.toLowerCase()) || 
+                            c.name.toLowerCase().includes(searchText.toLowerCase())
+                        )}
+                        size="small"
+                        pagination={{ pageSize: 10 }}
+                        scroll={{ y: 400 }}
+                        rowSelection={{
+                            selectedRowKeys: selectedCourseIds,
+                            onChange: (keys) => setSelectedCourseIds(keys),
+                            preserveSelectedRowKeys: true
+                        }}
+                    />
+                </div>
+            </Modal>
         </Space>
     );
 };

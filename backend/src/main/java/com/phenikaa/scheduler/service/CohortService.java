@@ -22,6 +22,35 @@ public class CohortService {
         return cohortRepo.findAll();
     }
 
+    @SuppressWarnings("null")
+    public java.util.Optional<Cohort> getCohortById(Long id) {
+        return cohortRepo.findById(id);
+    }
+
+    @SuppressWarnings("null")
+    public Cohort createCohort(Cohort cohort) {
+        return cohortRepo.save(cohort);
+    }
+
+    @SuppressWarnings("null")
+    public java.util.Optional<Cohort> updateCohort(Long id, Cohort updated) {
+        return cohortRepo.findById(id).map(c -> {
+            c.setName(updated.getName());
+            c.setStartYear(updated.getStartYear());
+            c.setEndYear(updated.getEndYear());
+            return cohortRepo.save(c);
+        });
+    }
+
+    @SuppressWarnings("null")
+    public boolean deleteCohort(Long id) {
+        if (cohortRepo.existsById(id)) {
+            cohortRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
     public String importCohortsExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
         int successCount = 0;
@@ -66,6 +95,7 @@ public class CohortService {
         return "Import completed! Success: " + successCount + ". Errors: " + errors.size() + "\n" + errors;
     }
 
+    @SuppressWarnings("deprecation")
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);
