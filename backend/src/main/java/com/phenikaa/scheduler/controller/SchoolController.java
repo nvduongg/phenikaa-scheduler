@@ -1,19 +1,17 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.model.School;
 import com.phenikaa.scheduler.service.SchoolService;
 import com.phenikaa.scheduler.security.services.UserDetailsImpl;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -23,22 +21,30 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class SchoolController {
 
-    @Autowired private SchoolService schoolService;
+    private final SchoolService schoolService;
+
+    public SchoolController(SchoolService schoolService) {
+        this.schoolService = schoolService;
+    }
 
     @GetMapping
     public ResponseEntity<List<School>> getAllSchools(Authentication authentication) {
-        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
-            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            // Nếu là ADMIN_SCHOOL, chỉ trả về trường của họ
-            if (userDetails.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN_SCHOOL"))) {
-                if (userDetails.getSchoolId() != null) {
-                    return schoolService.getSchoolById(userDetails.getSchoolId())
-                            .map(school -> ResponseEntity.ok(Collections.singletonList(school)))
-                            .orElse(ResponseEntity.ok(Collections.emptyList()));
-                }
-            }
+        Long schoolId = getSchoolIdIfAdminSchool(authentication);
+        if (schoolId != null) {
+            return schoolService.getSchoolById(schoolId)
+                    .map(school -> ResponseEntity.ok(Collections.singletonList(school)))
+                    .orElse(ResponseEntity.ok(Collections.emptyList()));
         }
         return ResponseEntity.ok(schoolService.getAllSchools());
+    }
+
+    private Long getSchoolIdIfAdminSchool(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserDetailsImpl userDetails)) {
+            return null;
+        }
+        boolean isAdminSchool = userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ADMIN_SCHOOL".equals(a.getAuthority()));
+        return isAdminSchool ? userDetails.getSchoolId() : null;
     }
 
     @GetMapping("/{id}")
@@ -78,34 +84,18 @@ public class SchoolController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Schools"); // Sheet name ngắn gọn
 
-            Row header = sheet.createRow(0);
             // Header tiếng Anh chuẩn
             String[] cols = {"School Code", "School Name"};
 
-            CellStyle style = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            style.setFont(font);
-
-            for (int i = 0; i < cols.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(cols[i]);
-                cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 30 * 256);
-            }
+            CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
+            ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 30);
 
             // Dữ liệu mẫu (Sample Data)
             Row sample = sheet.createRow(1);
             sample.createCell(0).setCellValue("SCS");
             sample.createCell(1).setCellValue("School of Computer Science");
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=School_Import_Template.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(out.toByteArray());
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "School_Import_Template.xlsx");
         }
     }
 }

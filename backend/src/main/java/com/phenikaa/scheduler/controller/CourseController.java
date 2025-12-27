@@ -1,17 +1,15 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.model.Course;
 import com.phenikaa.scheduler.service.CourseService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,7 +18,11 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class CourseController {
 
-    @Autowired private CourseService courseService;
+    private final CourseService courseService;
+
+    public CourseController(CourseService courseService) {
+        this.courseService = courseService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Course>> getAllCourses() {
@@ -60,7 +62,6 @@ public class CourseController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Courses"); // Tên sheet ngắn gọn
 
-            Row header = sheet.createRow(0);
             // Header tiếng Anh chi tiết
             String[] cols = {
                 "Course Code", 
@@ -72,17 +73,8 @@ public class CourseController {
                 "Managing School Code"
             };
 
-            CellStyle style = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            style.setFont(font);
-
-            for (int i = 0; i < cols.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(cols[i]);
-                cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 20 * 256);
-            }
+            CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
+            ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 20);
 
             // Dữ liệu mẫu
             Row sample = sheet.createRow(1);
@@ -102,18 +94,8 @@ public class CourseController {
             sample2.createCell(4).setCellValue(1.0);
             sample2.createCell(5).setCellValue("");
             sample2.createCell(6).setCellValue("PHX"); // Mã trường quản lý
-            sample2.createCell(3).setCellValue(2);
-            sample2.createCell(4).setCellValue(0);
-            sample2.createCell(5).setCellValue("");
-            sample2.createCell(6).setCellValue("PHX"); // Mã trường quản lý
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Course_Import_Template.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(out.toByteArray());
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "Course_Import_Template.xlsx");
         }
     }
 }

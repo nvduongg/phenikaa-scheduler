@@ -1,42 +1,57 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.core.GeneticAlgorithm;
 import com.phenikaa.scheduler.model.Semester;
 import com.phenikaa.scheduler.repository.SemesterRepository;
-import com.phenikaa.scheduler.core.GeneticAlgorithm;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/scheduler")
-@CrossOrigin(origins = "http://localhost:5173") // Cho phép Frontend truy cập
+@CrossOrigin(origins = "http://localhost:5173")
 public class SchedulerController {
-    @Autowired private GeneticAlgorithm geneticService;  // Thuật toán Di truyền (Mới)
-    @Autowired private SemesterRepository semesterRepo;
+
+    private static final Logger log = LoggerFactory.getLogger(SchedulerController.class);
+
+    // Chỉ giữ lại Core GA, bỏ heuristicService
+    private final GeneticAlgorithm geneticAlgorithm;
+    private final SemesterRepository semesterRepo;
+
+    public SchedulerController(GeneticAlgorithm geneticAlgorithm, SemesterRepository semesterRepo) {
+        this.geneticAlgorithm = geneticAlgorithm;
+        this.semesterRepo = semesterRepo;
+    }
 
     /**
-     * API: Chạy thuật toán Genetic Algorithm (tối ưu hóa điểm phạt)
+     * API duy nhất để xếp lịch: Sử dụng Genetic Algorithm
      */
-    @PostMapping("/run-genetic")
-    // @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<String> runGeneticScheduler() {
+    @PostMapping("/generate")
+    public ResponseEntity<String> generateSchedule() {
         try {
-            // Lấy kỳ học hiện tại
+            // Lấy kỳ học hiện tại (Active Semester)
             Semester currentSem = semesterRepo.findByIsCurrentTrue().orElse(null);
             if (currentSem == null) {
-                return ResponseEntity.badRequest().body("No active semester found! Please activate a semester.");
+                return ResponseEntity.badRequest().body("Lỗi: Không tìm thấy học kỳ đang kích hoạt (Active Semester)!");
             }
 
             long startTime = System.currentTimeMillis();
             
             // Chạy GA
-            String result = geneticService.runGeneticAlgorithm(currentSem.getId());
+            String result = geneticAlgorithm.run(currentSem.getId());
             
             long duration = System.currentTimeMillis() - startTime;
-            return ResponseEntity.ok(result + " (Execution Time: " + duration + "ms)");
+            
+            // Format kết quả trả về cho đẹp
+            return ResponseEntity.ok(String.format(
+                "Xếp lịch hoàn tất cho kỳ: %s\nKết quả: %s\nThời gian chạy: %d ms", 
+                currentSem.getName(), result, duration
+            ));
+
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Genetic Algorithm Failed: " + e.getMessage());
+            log.error("Failed to generate schedule", e);
+            return ResponseEntity.internalServerError().body("Lỗi hệ thống: " + e.getMessage());
         }
     }
 }

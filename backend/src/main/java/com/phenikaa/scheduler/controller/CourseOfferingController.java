@@ -1,5 +1,6 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.model.CourseOffering;
 import com.phenikaa.scheduler.service.AutoAssignService;
 import com.phenikaa.scheduler.service.CourseOfferingService;
@@ -7,14 +8,11 @@ import com.phenikaa.scheduler.service.SchedulerService;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -23,12 +21,19 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class CourseOfferingController {
 
-    @Autowired
-    private CourseOfferingService offeringService;
-    @Autowired 
-    private AutoAssignService autoAssignService;
-    @Autowired 
-    private SchedulerService schedulerService;
+    private final CourseOfferingService offeringService;
+    private final AutoAssignService autoAssignService;
+    private final SchedulerService schedulerService;
+
+    public CourseOfferingController(
+            CourseOfferingService offeringService,
+            AutoAssignService autoAssignService,
+            SchedulerService schedulerService
+    ) {
+        this.offeringService = offeringService;
+        this.autoAssignService = autoAssignService;
+        this.schedulerService = schedulerService;
+    }
 
     // API 1: Lấy danh sách toàn bộ kế hoạch mở lớp
     @GetMapping
@@ -86,7 +91,6 @@ public class CourseOfferingController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Offering Plan");
 
-            Row header = sheet.createRow(0);
             
             // --- CẬP NHẬT HEADER (7 CỘT) ---
             String[] cols = {
@@ -99,17 +103,8 @@ public class CourseOfferingController {
                 "Parent Code (For TH)"       // Col 6 (Mới)
             };
 
-            CellStyle style = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            style.setFont(font);
-
-            for (int i = 0; i < cols.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(cols[i]);
-                cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 25 * 256); // Độ rộng cột
-            }
+            CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
+            ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 25);
 
             // --- DỮ LIỆU MẪU (SAMPLE DATA) ---
             
@@ -153,13 +148,7 @@ public class CourseOfferingController {
             row4.createCell(5).setCellValue("ELN"); // Hoặc ALL
             row4.createCell(6).setCellValue("");
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Offering_Plan_Template_v2.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(out.toByteArray());
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "Offering_Plan_Template_v2.xlsx");
         }
     }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Select, Typography, message, Tag, Space, Input, Tooltip, Modal, Card } from 'antd';
 import { 
-    ReloadOutlined, 
+    DownloadOutlined,
     ThunderboltOutlined, 
     SearchOutlined, 
     ClockCircleOutlined,
@@ -25,6 +25,7 @@ const TimetableManagement = () => {
     const [semesterModalOpen, setSemesterModalOpen] = useState(false);
     const [updatingSemester, setUpdatingSemester] = useState(false);
     const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+    const [exporting, setExporting] = useState(false);
 
     // Filter States
     const [filters, setFilters] = useState({
@@ -89,6 +90,39 @@ const TimetableManagement = () => {
             message.error('Failed to update active semester');
         } finally {
             setUpdatingSemester(false);
+        }
+    };
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const res = await axiosClient.get('/timetable/export', {
+                params: selectedSemesterId ? { semesterId: selectedSemesterId } : undefined,
+                responseType: 'blob',
+            });
+
+            const disposition = res.headers?.['content-disposition'] || res.headers?.['Content-Disposition'];
+            let filename = 'Timetable.xlsx';
+            if (disposition && typeof disposition === 'string') {
+                        const match = disposition.match(/filename\*?=(?:UTF-8''|")?([^;"\n]+)/i);
+                if (match && match[1]) {
+                    filename = decodeURIComponent(match[1].replace(/"/g, '').trim());
+                }
+            }
+
+            const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            console.error(e);
+            message.error('Export failed');
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -285,7 +319,7 @@ const TimetableManagement = () => {
                     >
                         Run Auto-Schedule
                     </Button>
-                    <Button icon={<ReloadOutlined />} onClick={fetchData}>Refresh</Button>
+                    <Button icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>Export</Button>
                 </Space>
             </div>
 

@@ -2,7 +2,6 @@ package com.phenikaa.scheduler.controller;
 
 import com.phenikaa.scheduler.model.Semester;
 import com.phenikaa.scheduler.service.SemesterService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,7 +11,11 @@ import java.util.List;
 @RequestMapping("/api/v1/semesters")
 @CrossOrigin(origins = "http://localhost:5173")
 public class SemesterController {
-    @Autowired private SemesterService semesterService;
+    private final SemesterService semesterService;
+
+    public SemesterController(SemesterService semesterService) {
+        this.semesterService = semesterService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Semester>> getAll() {

@@ -1,16 +1,14 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.service.ExpertiseService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 @RestController
@@ -18,7 +16,11 @@ import java.io.IOException;
 @CrossOrigin(origins = "http://localhost:5173")
 public class ExpertiseController {
 
-    @Autowired private ExpertiseService expertiseService;
+    private final ExpertiseService expertiseService;
+
+    public ExpertiseController(ExpertiseService expertiseService) {
+        this.expertiseService = expertiseService;
+    }
 
     // API Import
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -33,34 +35,18 @@ public class ExpertiseController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Expertise");
 
-            Row header = sheet.createRow(0);
             String[] cols = {"Lecturer Code", "Course Code"};
             
             // Style
-            CellStyle style = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            style.setFont(font);
-
-            for (int i = 0; i < cols.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(cols[i]);
-                cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 20 * 256);
-            }
+            CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
+            ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 20);
 
             // Sample Data
             Row sample = sheet.createRow(1);
             sample.createCell(0).setCellValue("GV001");
             sample.createCell(1).setCellValue("CSE702011");
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Expertise_Import_Template.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(out.toByteArray());
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "Expertise_Import_Template.xlsx");
         }
     }
 }

@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Typography, message, Modal, Checkbox, Alert, Space } from 'antd';
+import { Form, Input, Button, Typography, message, Modal, Checkbox, Alert } from 'antd';
 import { 
     UserOutlined, 
     LockOutlined, 
     QuestionCircleOutlined, 
-    SafetyOutlined, 
     MailOutlined,
-    CheckCircleFilled,
-    PhoneOutlined,
-    GlobalOutlined
 } from '@ant-design/icons';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -24,18 +20,36 @@ const LoginPage = ({ onLoginSuccess }) => {
     const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
 
-    // Load Poppins font once for this page
+    // --- EFFECT: Add Font & Animation Styles ---
     useEffect(() => {
+        // 1. Load Font Poppins
         if (typeof document !== 'undefined' && !document.getElementById('poppins-font')) {
             const link = document.createElement('link');
             link.id = 'poppins-font';
             link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap';
+            link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap';
             document.head.appendChild(link);
+        }
+
+        // 2. Add Keyframes for Fade In Animation
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            @keyframes fadeInUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .login-form-wrapper {
+                animation: fadeInUp 0.8s ease-out forwards;
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        return () => {
+            if(styleSheet) document.head.removeChild(styleSheet);
         }
     }, []);
 
-    // --- HANDLERS (Giữ nguyên logic cũ) ---
+    // --- HANDLERS ---
     const onFinish = async (values) => {
         setLoading(true);
         try {
@@ -63,59 +77,21 @@ const LoginPage = ({ onLoginSuccess }) => {
     return (
         <div style={styles.container}>
             
-            {/* --- LEFT SIDE: ENHANCED BRANDING AREA --- */}
+            {/* --- LEFT SIDE: IMAGE WITH FADE EFFECT --- */}
             <div style={styles.leftSection}>
-                <div style={styles.overlay}>
-                    {/* Top Brand Info */}
-                    <div style={styles.brandContent}>
-                        <div style={styles.brandHeader}>
-                            <SafetyOutlined style={{ fontSize: 40, color: '#40a9ff', marginBottom: 20 }} />
-                            <h1 style={styles.brandTitle}>Phenikaa University</h1>
-                            <p style={styles.brandSubtitle}>Intelligent Timetabling & Resource Management System</p>
-                        </div>
-
-                        {/* Feature List (Bổ sung cho đỡ trống) */}
-                        <div style={styles.featureList}>
-                            <div style={styles.featureItem}>
-                                <CheckCircleFilled style={{ color: '#52c41a', marginRight: 10, fontSize: 18 }} />
-                                <Text style={styles.featureText}>Automated Course Scheduling</Text>
-                            </div>
-                            <div style={styles.featureItem}>
-                                <CheckCircleFilled style={{ color: '#52c41a', marginRight: 10, fontSize: 18 }} />
-                                <Text style={styles.featureText}>Smart Room Allocation</Text>
-                            </div>
-                            <div style={styles.featureItem}>
-                                <CheckCircleFilled style={{ color: '#52c41a', marginRight: 10, fontSize: 18 }} />
-                                <Text style={styles.featureText}>Lecturer Workload Tracking</Text>
-                            </div>
-                            <div style={styles.featureItem}>
-                                <CheckCircleFilled style={{ color: '#52c41a', marginRight: 10, fontSize: 18 }} />
-                                <Text style={styles.featureText}>Conflict Detection & Resolution</Text>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bottom Support Info (Bổ sung) */}
-                    <div style={styles.supportInfo}>
-                        <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, display: 'block', marginBottom: 8 }}>
-                            Having trouble logging in? Contact IT Support:
-                        </Text>
-                        <Space size="large">
-                            <span style={styles.contactItem}><PhoneOutlined /> Ext: 103 (IT Dept)</span>
-                            <span style={styles.contactItem}><MailOutlined /> support@phenikaa-uni.edu.vn</span>
-                            <span style={styles.contactItem}><GlobalOutlined /> it.phenikaa-uni.edu.vn</span>
-                        </Space>
-                    </div>
-                </div>
+                {/* Lớp phủ Gradient để tạo hiệu ứng mờ dần sang phải */}
+                <div style={styles.gradientOverlay}></div>
             </div>
 
-            {/* --- RIGHT SIDE: LOGIN FORM (Giữ nguyên) --- */}
+            {/* --- RIGHT SIDE: CLEAN LOGIN FORM --- */}
             <div style={styles.rightSection}>
-                <div style={styles.formContainer}>
+                <div className="login-form-wrapper" style={styles.formContainer}>
+                    
+                    {/* Header */}
                     <div style={{ textAlign: 'center', marginBottom: 40 }}>
-                        <img src={logo} alt="Logo" style={{ height: 70, marginBottom: 15 }} />
-                        <Title level={2} style={{ color: '#003a70', margin: 0, fontWeight: 700 }}>Welcome Back</Title>
-                        <Text type="secondary" style={{ fontSize: 16 }}>Sign in to access your dashboard</Text>
+                        <img src={logo} alt="Phenikaa Logo" style={styles.logo} />
+                        <Title level={2} style={styles.title}>Hello Again!</Title>
+                        <Text style={styles.subtitle}>Welcome back to Phenikaa Internal System</Text>
                     </div>
 
                     <Form
@@ -124,46 +100,45 @@ const LoginPage = ({ onLoginSuccess }) => {
                         layout="vertical"
                         size="large"
                         initialValues={{ remember: true }}
+                        requiredMark={false} // Ẩn dấu sao đỏ để nhìn sạch hơn
                     >
                         <Form.Item
-                            label={<span style={{ fontWeight: 600, color: '#003a70' }}>Username / Staff ID</span>}
                             name="username"
-                            rules={[{ required: true, message: 'Please input your Username!' }]}
+                            rules={[{ required: true, message: 'Please enter your ID!' }]}
                         >
                             <Input 
-                                prefix={<UserOutlined style={{ color: '#bfbfbf' }} />} 
-                                placeholder="e.g., admin_psc" 
+                                prefix={<UserOutlined style={{ color: '#003a70', opacity: 0.5 }} />} 
+                                placeholder="Username / Staff ID" 
                                 style={styles.input}
                             />
                         </Form.Item>
 
                         <Form.Item
-                            label={<span style={{ fontWeight: 600, color: '#003a70' }}>Password</span>}
                             name="password"
-                            rules={[{ required: true, message: 'Please input your Password!' }]}
+                            rules={[{ required: true, message: 'Please enter your password!' }]}
                         >
                             <Input.Password 
-                                prefix={<LockOutlined style={{ color: '#bfbfbf' }} />} 
-                                placeholder="Enter your password" 
+                                prefix={<LockOutlined style={{ color: '#003a70', opacity: 0.5 }} />} 
+                                placeholder="Password" 
                                 style={styles.input}
                             />
                         </Form.Item>
 
                         <div style={styles.optionsRow}>
                             <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox>Remember me</Checkbox>
+                                <Checkbox style={{ color: '#666' }}>Remember me</Checkbox>
                             </Form.Item>
 
                             <Button 
                                 type="link" 
                                 onClick={() => setIsForgotModalOpen(true)}
-                                style={{ padding: 0, fontWeight: 600, color: '#003a70' }}
+                                style={styles.forgotBtn}
                             >
-                                Forgot password?
+                                Recovery Password
                             </Button>
                         </div>
 
-                        <Form.Item>
+                        <Form.Item style={{ marginTop: 20 }}>
                             <Button 
                                 type="primary" 
                                 htmlType="submit" 
@@ -171,44 +146,44 @@ const LoginPage = ({ onLoginSuccess }) => {
                                 block
                                 style={styles.loginBtn}
                             >
-                                Sign In
+                                Login
                             </Button>
                         </Form.Item>
                     </Form>
                     
-                    <div style={{ textAlign: 'center', marginTop: 40 }}>
-                        <Text type="secondary" style={{ fontSize: 13 }}>
-                            © 2025 Phenikaa University. Internal System v1.0
+                    <div style={styles.footer}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                            © 2025 Phenikaa University. All Rights Reserved.
                         </Text>
                     </div>
                 </div>
             </div>
 
-            {/* --- MODAL (Giữ nguyên) --- */}
+            {/* --- MODAL (Giữ nguyên logic) --- */}
             <Modal
-                title={<span><QuestionCircleOutlined /> Reset Password Request</span>}
+                title={<span><QuestionCircleOutlined /> Reset Password</span>}
                 open={isForgotModalOpen}
                 onCancel={() => setIsForgotModalOpen(false)}
                 footer={null}
                 centered
             >
                 <Alert
-                    message="Internal System Policy"
-                    description="Self-service password reset is disabled. Please submit a request below, and the IT Department will contact you via your university email."
+                    message="Support Policy"
+                    description="Please contact IT Department for password reset assistance."
                     type="info"
                     showIcon
                     style={{ marginBottom: 20 }}
                 />
                 <Form onFinish={handleSendResetRequest} layout="vertical">
-                    <Form.Item name="username" label="Username / Staff ID" rules={[{ required: true }]}>
+                    <Form.Item name="username" label="Your ID" rules={[{ required: true }]}>
                         <Input prefix={<UserOutlined />} placeholder="e.g. admin_psc" />
                     </Form.Item>
-                    <Form.Item name="email" label="Contact Email (Optional)">
+                    <Form.Item name="email" label="Email (Optional)">
                         <Input prefix={<MailOutlined />} placeholder="name@phenikaa-uni.edu.vn" />
                     </Form.Item>
                     <div style={{ textAlign: 'right', marginTop: 10 }}>
-                        <Button onClick={() => setIsForgotModalOpen(false)} style={{ marginRight: 10 }}>Cancel</Button>
-                        <Button type="primary" htmlType="submit" loading={requestLoading}>Submit Request</Button>
+                        <Button onClick={() => setIsForgotModalOpen(false)} style={{ marginRight: 10 }}>Close</Button>
+                        <Button type="primary" htmlType="submit" loading={requestLoading}>Send Request</Button>
                     </div>
                 </Form>
             </Modal>
@@ -223,88 +198,29 @@ const styles = {
         height: '100vh',
         width: '100vw',
         overflow: 'hidden',
-        fontFamily: "'Poppins', sans-serif", // Sử dụng Poppins cho đồng nhất
+        fontFamily: "'Poppins', sans-serif",
+        backgroundColor: '#ffffff',
     },
     // --- LEFT SIDE ---
     leftSection: {
-        flex: '1.3',
+        flex: '1.6', // Tăng tỷ lệ ảnh lên một chút
         position: 'relative',
-        backgroundImage: 'url("https://phenikaa-uni.edu.vn/img/phenikaa-campus.jpg")', // Ảnh nền
+        // Ảnh nền chất lượng cao
+        backgroundImage: 'url("https://phenikaa-uni.edu.vn:3600/pu/vi/gioithieuvedaihocphenikaa/rectangle-65-2.png")', 
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
     },
-    overlay: {
+    gradientOverlay: {
         position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        // Gradient xanh đậm dần xuống dưới để text dễ đọc
-        background: 'linear-gradient(135deg, rgba(0, 58, 112, 0.9) 0%, rgba(0, 25, 60, 0.95) 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center', // Căn giữa nội dung theo chiều dọc
-        alignItems: 'center', // Căn giữa theo chiều ngang
-        padding: '80px 60px',
-        gap: '40px',
-    },
-    brandContent: {
-        color: 'white',
-        textAlign: 'center',
-    },
-    brandHeader: {
-        marginBottom: 40,
-    },
-    brandTitle: {
-        fontSize: '52px',
-        fontWeight: '800',
-        marginBottom: '15px',
-        lineHeight: 1.1,
-        letterSpacing: '-1px',
-        background: 'linear-gradient(to right, #ffffff, #d9d9d9)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-    },
-    brandSubtitle: {
-        fontSize: '18px',
-        fontWeight: 300,
-        opacity: 0.85,
-        maxWidth: '620px',
-    },
-    // Danh sách tính năng (Lấp đầy khoảng trống)
-    featureList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        marginTop: '20px',
-    },
-    featureItem: {
-        display: 'flex',
-        alignItems: 'center',
-        background: 'rgba(255, 255, 255, 0.1)', // Hiệu ứng kính
-        padding: '15px 20px',
-        borderRadius: '12px',
-        backdropFilter: 'blur(5px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        maxWidth: '450px',
-        transition: 'transform 0.3s ease',
-        cursor: 'default',
-    },
-    featureText: {
-        color: 'white',
-        fontSize: '16px',
-        fontWeight: 500,
-    },
-    // Footer Support Info
-    supportInfo: {
-        borderTop: '1px solid rgba(255,255,255,0.2)',
-        paddingTop: 20,
-        textAlign: 'center',
-    },
-    contactItem: {
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: '14px',
-        fontWeight: 500,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0,
+        // MAGIC HERE: Gradient từ trong suốt (trái) sang trắng tinh (phải)
+        // 0% -> 50%: Rõ nét
+        // 50% -> 100%: Mờ dần vào nền trắng
+        background: 'linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.6) 70%, #ffffff 100%)',
     },
 
     // --- RIGHT SIDE ---
@@ -313,35 +229,69 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffff', // Nền trắng hòa với gradient
+        zIndex: 1, // Đảm bảo nổi lên trên lớp viền mờ của ảnh nếu có
     },
     formContainer: {
         width: '100%',
-        maxWidth: '450px',
-        padding: '40px',
+        maxWidth: '420px',
+        padding: '0 40px',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    logo: {
+        height: 80,
+        marginBottom: 20,
+        filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.1))', // Đổ bóng nhẹ cho logo nổi lên
+    },
+    title: {
+        color: '#003a70', 
+        marginBottom: 5, 
+        fontWeight: 700,
+        letterSpacing: '-0.5px'
+    },
+    subtitle: {
+        fontSize: 15,
+        color: '#8c8c8c',
     },
     input: {
-        height: 50,
-        borderRadius: 8,
+        height: 55, // Input cao hơn, trông sang hơn
+        borderRadius: '12px',
         fontSize: '16px',
-        backgroundColor: '#f9f9f9', // Màu nền input hơi xám nhẹ
-        border: '1px solid #e0e0e0',
+        backgroundColor: '#f7f9fc', // Màu nền input hơi xanh xám cực nhạt
+        border: '1px solid transparent',
+        transition: 'all 0.3s',
+        paddingLeft: 20,
     },
+    // Tùy chỉnh CSS sâu hơn cho input khi focus có thể thêm trong file css global nếu muốn
+    
     optionsRow: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 20,
+    },
+    forgotBtn: {
+        padding: 0, 
+        fontWeight: 600, 
+        color: '#003a70',
+        fontSize: '14px'
     },
     loginBtn: {
-        height: 55, // Nút to hơn
-        fontSize: 18,
-        fontWeight: 'bold',
+        height: 55,
+        fontSize: '16px',
+        fontWeight: 600,
         backgroundColor: '#003a70',
         borderColor: '#003a70',
-        borderRadius: 8,
-        boxShadow: '0 8px 20px rgba(0, 58, 112, 0.2)',
+        borderRadius: '12px',
+        boxShadow: '0 10px 25px rgba(0, 58, 112, 0.3)', // Đổ bóng xanh theo màu nút
         transition: 'all 0.3s ease',
+        letterSpacing: '0.5px',
+    },
+    footer: {
+        textAlign: 'center', 
+        marginTop: 50,
+        opacity: 0.7
     }
 };
 

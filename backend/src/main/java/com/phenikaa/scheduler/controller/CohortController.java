@@ -1,17 +1,15 @@
 package com.phenikaa.scheduler.controller;
 
+import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.model.Cohort;
 import com.phenikaa.scheduler.service.CohortService;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -20,7 +18,11 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class CohortController {
 
-    @Autowired private CohortService cohortService;
+    private final CohortService cohortService;
+
+    public CohortController(CohortService cohortService) {
+        this.cohortService = cohortService;
+    }
 
     @GetMapping
     public ResponseEntity<List<Cohort>> getAllCohorts() {
@@ -59,20 +61,10 @@ public class CohortController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Cohorts");
 
-            Row header = sheet.createRow(0);
             String[] cols = {"Cohort Name", "Start Year", "End Year"};
 
-            CellStyle style = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            style.setFont(font);
-
-            for (int i = 0; i < cols.length; i++) {
-                Cell cell = header.createCell(i);
-                cell.setCellValue(cols[i]);
-                cell.setCellStyle(style);
-                sheet.setColumnWidth(i, 20 * 256);
-            }
+            CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
+            ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 20);
 
             // Sample Data
             Row sample = sheet.createRow(1);
@@ -80,13 +72,7 @@ public class CohortController {
             sample.createCell(1).setCellValue(2023);
             sample.createCell(2).setCellValue(2027);
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Cohort_Import_Template.xlsx")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                    .body(out.toByteArray());
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "Cohort_Import_Template.xlsx");
         }
     }
 }

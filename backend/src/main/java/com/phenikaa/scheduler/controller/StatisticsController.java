@@ -4,7 +4,6 @@ import com.phenikaa.scheduler.dto.LecturerWorkloadStat;
 import com.phenikaa.scheduler.model.Semester;
 import com.phenikaa.scheduler.repository.SemesterRepository;
 import com.phenikaa.scheduler.service.StatisticsService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +14,13 @@ import java.util.List;
 @CrossOrigin(origins = "http://localhost:5173")
 public class StatisticsController {
 
-    @Autowired private StatisticsService statsService;
-    @Autowired private SemesterRepository semesterRepo;
+    private final StatisticsService statsService;
+    private final SemesterRepository semesterRepo;
+
+    public StatisticsController(StatisticsService statsService, SemesterRepository semesterRepo) {
+        this.statsService = statsService;
+        this.semesterRepo = semesterRepo;
+    }
 
     @GetMapping("/lecturer-workload")
     public ResponseEntity<?> getLecturerWorkload(@RequestParam(required = false) Long semesterId) {

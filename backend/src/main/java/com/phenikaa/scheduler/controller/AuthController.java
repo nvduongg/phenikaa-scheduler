@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 // --------------------------------
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -17,16 +16,24 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "http://localhost:5173")
 public class AuthController {
 
-    @Autowired UserRepository userRepository;
-    @Autowired PasswordEncoder encoder;
-    @Autowired JwtUtils jwtUtils;
+    private final UserRepository userRepository;
+    private final PasswordEncoder encoder;
+    private final JwtUtils jwtUtils;
+
+    public AuthController(UserRepository userRepository, PasswordEncoder encoder, JwtUtils jwtUtils) {
+        this.userRepository = userRepository;
+        this.encoder = encoder;
+        this.jwtUtils = jwtUtils;
+    }
 
     // API Đăng nhập
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         // 1. Tìm user trong DB
-        User user = userRepository.findByUsername(loginRequest.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByUsername(loginRequest.getUsername()).orElse(null);
+        if (user == null) {
+            return ResponseEntity.badRequest().body("Error: User not found");
+        }
 
         // 2. Kiểm tra mật khẩu
         if (!encoder.matches(loginRequest.getPassword(), user.getPassword())) {
