@@ -99,8 +99,8 @@ public class CourseOfferingController {
                 "Planned Size",              // Col 2
                 "Target Classes",            // Col 3
                 "Fixed Lecturer (Optional)", // Col 4
-                "Type (LT / TH / ALL)",      // Col 5 (Mới)
-                "Parent Code (For TH)"       // Col 6 (Mới)
+                "Type (LT / TH / ALL / ELN / PC) (Optional)", // Col 5
+                "Parent Code (Optional)"      // Col 6
             };
 
             CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
@@ -137,9 +137,19 @@ public class CourseOfferingController {
             row3.createCell(4).setCellValue("");
             row3.createCell(5).setCellValue("TH");
             row3.createCell(6).setCellValue("2025_JAVA_01"); // TRỎ VỀ MÃ CỦA DÒNG 1
+
+            // Mẫu 3.1: Lớp học phòng máy (không cần LT/TH)
+            Row row31 = sheet.createRow(4);
+            row31.createCell(0).setCellValue("2025_PYTHON_PC_01");
+            row31.createCell(1).setCellValue("CSE702012");
+            row31.createCell(2).setCellValue(45);
+            row31.createCell(3).setCellValue("K17-CNTT-01");
+            row31.createCell(4).setCellValue("");
+            row31.createCell(5).setCellValue("PC"); // ép phòng LAB/PC
+            row31.createCell(6).setCellValue("");
             
             // Mẫu 4: Môn Online/Đại trà (Gộp chung)
-            Row row4 = sheet.createRow(4);
+            Row row4 = sheet.createRow(5);
             row4.createCell(0).setCellValue("2025_LAW_01");
             row4.createCell(1).setCellValue("LAW101");
             row4.createCell(2).setCellValue(200);
@@ -148,7 +158,7 @@ public class CourseOfferingController {
             row4.createCell(5).setCellValue("ELN"); // Hoặc ALL
             row4.createCell(6).setCellValue("");
 
-            return ExcelTemplateUtil.toXlsxResponse(workbook, "Offering_Plan_Template_v2.xlsx");
+            return ExcelTemplateUtil.toXlsxResponse(workbook, "Offering_Plan_Template.xlsx");
         }
     }
 

@@ -125,15 +125,8 @@ public class GeneticAlgorithm {
 
         // 1. Chọn ngày (Day)
         int day;
-        if (isOnline) {
-            // Online học tối -> Có thể học cả tuần (2-8)
-            day = 2 + (int)(Math.random() * 7); 
-        } else {
-            // Offline ưu tiên học 2-7, hạn chế CN (trừ khi random trúng)
-            // Tỷ lệ: 90% rơi vào 2-7, 10% rơi vào CN nếu cần
-            if (Math.random() < 0.9) day = 2 + (int)(Math.random() * 6);
-            else day = 8;
-        }
+        // Quy chế: chỉ học từ Thứ 2 đến Thứ 7 (2-7), không xếp Chủ nhật
+        day = 2 + (int)(Math.random() * 6);
 
         // 2. Chọn Kíp (Start Period) - TUÂN THỦ QUY CHẾ
         int[] validSlots;
@@ -176,9 +169,11 @@ public class GeneticAlgorithm {
 
         for (CourseOffering off : allOfferings) {
             Gene gene = schedule.genes.get(off.getId());
-            
-            int duration = (int)Math.ceil(off.getCourse().getCredits());
-            if (duration <= 0) duration = 3;
+
+            // 0. Không xếp Chủ nhật
+            if (gene.day == 8) score -= 5000;
+
+            int duration = getSessionDuration(off);
 
             // 1. Phạt Vi phạm Loại phòng & Sức chứa (Dù randomGene đã lọc, nhưng mutation có thể gây lỗi)
             if (!gene.room.getType().equalsIgnoreCase(getRequiredRoomType(off))) score -= 1000;
@@ -221,7 +216,7 @@ public class GeneticAlgorithm {
             if (off.getParent() != null) {
                 Gene parentGene = schedule.genes.get(off.getParent().getId());
                 if (parentGene != null && parentGene.day == gene.day) {
-                    int pDuration = (int)Math.ceil(off.getParent().getCourse().getCredits());
+                    int pDuration = getSessionDuration(off.getParent());
                     int pEnd = parentGene.startPeriod + pDuration - 1;
                     int cEnd = gene.startPeriod + duration - 1;
 
@@ -290,8 +285,7 @@ public class GeneticAlgorithm {
             Gene gene = best.genes.get(off.getId());
             off.setDayOfWeek(gene.day);
             off.setStartPeriod(gene.startPeriod);
-            int duration = (int)Math.ceil(off.getCourse().getCredits());
-            if (duration <= 0) duration = 3;
+            int duration = getSessionDuration(off);
             off.setEndPeriod(gene.startPeriod + duration - 1);
             off.setRoom(gene.room);
             
@@ -314,7 +308,16 @@ public class GeneticAlgorithm {
 
     private String getRequiredRoomType(CourseOffering off) {
         if (isOnlineCourse(off)) return "ONLINE";
+        String required = off.getRequiredRoomType();
+        if (required != null && !required.trim().isEmpty()) {
+            return required.trim().toUpperCase();
+        }
         if ("TH".equalsIgnoreCase(off.getClassType())) return "LAB";
         return "THEORY";
+    }
+
+    private int getSessionDuration(CourseOffering off) {
+        // Quy chế kíp học: mọi lớp đều học theo 1 kíp = 3 tiết
+        return 3;
     }
 }

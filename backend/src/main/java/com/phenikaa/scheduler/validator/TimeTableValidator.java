@@ -17,6 +17,11 @@ public class TimeTableValidator {
             Room room, 
             List<CourseOffering> scheduledList
     ) {
+        // Quy chế: chỉ học Thứ 2 - Thứ 7 (GeneticAlgorithm dùng mapping 2-8)
+        if (day < 2 || day > 7) {
+            return false;
+        }
+
         // 1. TÍNH THỜI LƯỢNG CHÍNH XÁC THEO LOẠI LỚP
         int duration = calculateDuration(offering);
         int endPeriod = startPeriod + duration - 1;
@@ -33,6 +38,9 @@ public class TimeTableValidator {
 
         boolean isOnline = isOnlineCourse(offering);
 
+        String requiredRoomType = offering.getRequiredRoomType();
+        if (requiredRoomType != null) requiredRoomType = requiredRoomType.trim().toUpperCase();
+
         // 3a. Kíp học chuẩn: chỉ cho phép bắt đầu tại 1,4,7,10,13
         if (startPeriod != 1 && startPeriod != 4 && startPeriod != 7 && startPeriod != 10 && startPeriod != 13) {
             return false;
@@ -48,17 +56,27 @@ public class TimeTableValidator {
             return false;
         }
 
-        // 3d. Ràng buộc chi tiết theo loại lớp
+        // 3d. Nếu có yêu cầu loại phòng cụ thể thì ép theo đó
+        // (VD môn PSC học phòng PC: requiredRoomType = LAB)
+        if (!isOnline && requiredRoomType != null && !requiredRoomType.isEmpty()) {
+            if (!room.getType().equalsIgnoreCase(requiredRoomType)) {
+                return false;
+            }
+        }
+
+        // 3e. Ràng buộc chi tiết theo loại lớp (chỉ áp dụng khi KHÔNG bị ép loại phòng)
         // TH: bắt buộc Lab
-        if ("TH".equals(type) && !room.getType().equalsIgnoreCase("LAB")) {
+        if ((requiredRoomType == null || requiredRoomType.isEmpty())
+                && "TH".equals(type) && !room.getType().equalsIgnoreCase("LAB")) {
             return false;
         }
-        // LT: không chiếm Lab (để dành cho TH)
-        if ("LT".equals(type) && room.getType().equalsIgnoreCase("LAB")) {
+        // LT: không chiếm Lab (để dành cho TH) -> bỏ qua nếu bị ép LAB
+        if ((requiredRoomType == null || requiredRoomType.isEmpty())
+                && "LT".equals(type) && room.getType().equalsIgnoreCase("LAB")) {
             return false;
         }
 
-        // 3e. ELN/Coursera nên bắt đầu tiết 13 (hard-constraint)
+        // 3f. ELN/Coursera nên bắt đầu tiết 13 (hard-constraint)
         if (isOnline && startPeriod != 13) {
             return false;
         }
@@ -121,15 +139,8 @@ public class TimeTableValidator {
 
     // Helper tính thời lượng
     private int calculateDuration(CourseOffering offering) {
-        String type = offering.getClassType();
-        Double credits = 0.0;
-
-        if ("LT".equals(type)) credits = offering.getCourse().getTheoryCredits();
-        else if ("TH".equals(type)) credits = offering.getCourse().getPracticeCredits();
-        else credits = offering.getCourse().getCredits(); // ALL hoặc ELN
-
-        if (credits == null || credits == 0) return 3; // Fallback
-        return (int) Math.ceil(credits);
+        // Quy chế kíp học: mọi lớp đều học theo 1 kíp = 3 tiết
+        return 3;
     }
 
     private boolean hasCommonClass(String target1, String target2) {

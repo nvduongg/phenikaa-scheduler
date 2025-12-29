@@ -183,36 +183,37 @@ public class CourseOfferingService {
 
             Sheet sheet = workbook.getSheetAt(0);
 
-            // --- VÒNG 1: XỬ LÝ LỚP MẸ (LT, ALL, ELN) TRƯỚC ---
+            // --- PASS 1: Tạo/Cập nhật tất cả lớp (KHÔNG bắt buộc Parent) ---
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null)
-                    continue;
+                if (row == null) continue;
 
-                String classType = getCellValue(row.getCell(5)); // Giả sử cột 5 là Type
-                if ("TH".equalsIgnoreCase(classType))
-                    continue; // Bỏ qua lớp TH ở vòng này
-
-                processRow(row, i, errors, false, currentSem); // False = Không xử lý Parent
+                boolean saved = processRow(row, i, errors, currentSem);
+                if (saved) successCount++;
             }
 
-            // --- VÒNG 2: XỬ LÝ LỚP CON (TH) ---
+            // --- PASS 2: Liên kết Parent nếu có Parent Code (tùy chọn) ---
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
-                if (row == null)
+                if (row == null) continue;
+
+                String classCode = getCellValue(row.getCell(0));
+                String parentCode = getCellValue(row.getCell(6));
+                if (classCode.isEmpty() || parentCode.isEmpty()) continue;
+
+                Optional<CourseOffering> childOpt = offeringRepo.findByCode(classCode);
+                if (childOpt.isEmpty()) continue;
+
+                Optional<CourseOffering> parentOpt = offeringRepo.findByCode(parentCode);
+                if (parentOpt.isEmpty()) {
+                    errors.add("Row " + (i + 1) + ": Parent Class '" + parentCode + "' not found. (Parent Code is optional)");
                     continue;
+                }
 
-                String classType = getCellValue(row.getCell(5));
-                if (!"TH".equalsIgnoreCase(classType))
-                    continue; // Chỉ xử lý lớp TH
-
-                boolean created = processRow(row, i, errors, true, currentSem); // True = Xử lý Parent
-                if (created)
-                    successCount++;
+                CourseOffering child = childOpt.get();
+                child.setParent(parentOpt.get());
+                offeringRepo.save(child);
             }
-
-            // Đếm lại tổng số lớp LT/ALL đã tạo ở vòng 1 (để báo cáo cho đúng)
-            successCount += (sheet.getLastRowNum() - errors.size() - successCount);
 
         } catch (Exception e) {
             return "File Error: " + e.getMessage();
@@ -220,7 +221,7 @@ public class CourseOfferingService {
         return "Import completed! Errors: " + errors.size() + "\n" + errors;
     }
 
-    private boolean processRow(Row row, int rowIndex, List<String> errors, boolean isChildPass, Semester semester) {
+    private boolean processRow(Row row, int rowIndex, List<String> errors, Semester semester) {
         try {
             // Đọc dữ liệu từ các cột
             // 0: Class Code | 1: Course Code | 2: Size | 3: Target Classes
@@ -231,8 +232,7 @@ public class CourseOfferingService {
             String sizeStr = getCellValue(row.getCell(2));
             String targetClasses = getCellValue(row.getCell(3));
             String lecturerCode = getCellValue(row.getCell(4));
-            String classType = getCellValue(row.getCell(5)).toUpperCase();
-            String parentCode = getCellValue(row.getCell(6));
+            String rawType = getCellValue(row.getCell(5));
 
             if (classCode.isEmpty() || courseCode.isEmpty())
                 return false;
@@ -244,13 +244,42 @@ public class CourseOfferingService {
                 return false;
             }
 
+            Course course = courseOpt.get();
+
+            String normalizedType = rawType != null ? rawType.trim().toUpperCase() : "";
+            String classType;
+            String requiredRoomType = null;
+
+            // Cho phép nhập PC/LAB để ép phòng máy nhưng không ép là TH
+            if (normalizedType.isEmpty()) {
+                classType = "ALL";
+
+                // Mặc định: nếu học phần thuộc Trường Máy tính (PSC) và không ghi LT/TH,
+                // thì coi như học phòng PC (LAB)
+                if (isComputingSchool(course)) {
+                    requiredRoomType = "LAB";
+                }
+            } else if ("PC".equals(normalizedType) || "LAB".equals(normalizedType)) {
+                classType = "ALL";
+                requiredRoomType = "LAB";
+            } else {
+                classType = normalizedType;
+            }
+
             CourseOffering offering = offeringRepo.findByCode(classCode).orElse(new CourseOffering());
             offering.setCode(classCode);
-            offering.setCourse(courseOpt.get());
+            offering.setCourse(course);
             offering.setTargetClasses(targetClasses);
-            offering.setClassType(classType.isEmpty() ? "ALL" : classType);
+            offering.setClassType(classType);
             offering.setStatus("PLANNED");
             offering.setSemester(semester); // Gán kỳ học hiện tại
+
+            // requiredRoomType: nếu file có chỉ định (hoặc default PSC), set theo đó; còn lại clear để dùng rule mặc định
+            if (requiredRoomType != null && !requiredRoomType.isEmpty()) {
+                offering.setRequiredRoomType(requiredRoomType);
+            } else {
+                offering.setRequiredRoomType(null);
+            }
 
             // Xử lý Size
             try {
@@ -266,21 +295,8 @@ public class CourseOfferingService {
                     offering.setLecturer(lecOpt.get());
             }
 
-            // --- QUY TẮC QUAN TRỌNG: LIÊN KẾT CHA CON ---
-            if (isChildPass && "TH".equals(classType)) {
-                if (parentCode.isEmpty()) {
-                    errors.add("Row " + (rowIndex + 1) + ": Class Type is TH but Parent Code is empty.");
-                    return false;
-                }
-
-                Optional<CourseOffering> parentOpt = offeringRepo.findByCode(parentCode);
-                if (parentOpt.isEmpty()) {
-                    errors.add("Row " + (rowIndex + 1) + ": Parent Class '" + parentCode
-                            + "' not found (Make sure Parent is LT/ALL).");
-                    return false;
-                }
-                offering.setParent(parentOpt.get());
-            }
+            // Parent sẽ được xử lý ở PASS 2 (tùy chọn). Không bắt buộc TH phải có Parent.
+            offering.setParent(null);
 
             offeringRepo.save(offering);
             return true;
@@ -289,6 +305,20 @@ public class CourseOfferingService {
             errors.add("Row " + (rowIndex + 1) + " Error: " + ex.getMessage());
             return false;
         }
+    }
+
+    private boolean isComputingSchool(Course course) {
+        if (course == null) return false;
+        if (course.getSchool() != null && course.getSchool().getCode() != null) {
+            return "PSC".equalsIgnoreCase(course.getSchool().getCode());
+        }
+        // Fallback: nếu course.school null nhưng managingFaculty thuộc PSC
+        if (course.getManagingFaculty() != null
+                && course.getManagingFaculty().getSchool() != null
+                && course.getManagingFaculty().getSchool().getCode() != null) {
+            return "PSC".equalsIgnoreCase(course.getManagingFaculty().getSchool().getCode());
+        }
+        return false;
     }
 
     @SuppressWarnings("deprecation")

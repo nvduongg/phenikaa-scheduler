@@ -32,6 +32,12 @@ public class CourseOffering {
     @Column(name = "class_type")
     private String classType = "ALL"; 
 
+    // 1b. Yêu cầu loại phòng (nếu muốn ép phòng theo nhu cầu riêng)
+    // VD: "LAB" (phòng PC/phòng máy), "THEORY", "HALL", "ONLINE"
+    // Nếu null/blank thì hệ thống sẽ suy luận dựa trên classType và đặc tính môn.
+    @Column(name = "required_room_type")
+    private String requiredRoomType;
+
     // 2. Mối quan hệ Cha - Con (Lớp TH trỏ về Lớp LT của nó)
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "parent_id")

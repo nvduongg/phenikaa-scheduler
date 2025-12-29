@@ -141,10 +141,11 @@ const TimetableManagement = () => {
     // 4. Table Columns Definition
     const columns = [
         {
-            title: 'Class',
+            title: 'Course Offerings',
+            align: 'left',
             dataIndex: 'code',
             key: 'code',
-            width: 350,
+            width: 380,
             sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text, record) => (

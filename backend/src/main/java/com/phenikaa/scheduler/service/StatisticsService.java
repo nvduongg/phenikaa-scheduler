@@ -44,8 +44,8 @@ public class StatisticsService {
                 if (c.getStartPeriod() != null && c.getEndPeriod() != null) {
                     durationPerSession = c.getEndPeriod() - c.getStartPeriod() + 1;
                 } else {
-                    // Fallback nếu dữ liệu lỗi
-                    durationPerSession = (int) Math.ceil(c.getCourse().getCredits());
+                    // Quy chế kíp học: 1 buổi = 3 tiết
+                    durationPerSession = 3;
                 }
 
                 // Tạm thời: dùng số tuần mặc định (ví dụ 15 tuần)

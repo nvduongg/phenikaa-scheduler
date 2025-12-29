@@ -303,7 +303,7 @@ const App = () => {
             </Content>
 
             <Footer style={{ textAlign: 'center', background: 'transparent', color: '#888' }}>
-                Phenikaa University Scheduler ©2025 Created by IT Student
+                Phenikaa University Scheduler ©2025
             </Footer>
         </Layout>
     );
