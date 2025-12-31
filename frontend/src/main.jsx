@@ -11,7 +11,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <ConfigProvider
       theme={{
         token: {
-          fontFamily: 'Poppins, sans-serif',
+          fontFamily: "Inter, Montserrat, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
           colorPrimary: '#1e3b71', // Màu xanh thương hiệu Phenikaa (gần giống)
         },
       }}

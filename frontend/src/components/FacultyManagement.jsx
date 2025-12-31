@@ -19,7 +19,7 @@ const FacultyManagement = () => {
             const res = await axiosClient.get('/faculties');
             setFaculties(res.data);
         } catch {
-            message.error("Failed to fetch faculties");
+            message.error("Không thể tải danh sách khoa/viện");
         } finally {
             setLoading(false);
         }
@@ -46,10 +46,10 @@ const FacultyManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchFaculties();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -65,13 +65,13 @@ const FacultyManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     const columns = [
         {
-            title: 'Faculty Code',
+            title: 'Mã khoa/viện',
             dataIndex: 'code',
             key: 'code',
             width: 150,
@@ -80,7 +80,7 @@ const FacultyManagement = () => {
             render: (text) => <Tag color="blue">{text}</Tag>
         },
         {
-            title: 'Faculty Name',
+            title: 'Tên khoa/viện',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
@@ -88,22 +88,22 @@ const FacultyManagement = () => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Affiliated School',
+            title: 'Trường trực thuộc',
             dataIndex: ['school', 'name'],
             key: 'school',
             sorter: (a, b) => (a.school?.name || '').localeCompare(b.school?.name || ''),
             sortDirections: ['ascend', 'descend'],
-            render: (text) => text ? <Tag color="purple">{text}</Tag> : <Text type="secondary">Phenikaa University (Direct)</Text>
+            render: (text) => text ? <Tag color="purple">{text}</Tag> : <Text type="secondary">Đại học Phenikaa (Trực thuộc)</Text>
         }
         ,{
-            title: 'Actions',
+            title: 'Thao tác',
             key: 'actions',
             width: 160,
             render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this faculty?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa khoa/viện này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -115,33 +115,33 @@ const FacultyManagement = () => {
     const onEdit = (record) => { setEditing(record); form.setFieldsValue({ name: record.name, code: record.code, school: record.school?.id }); setModalVisible(true); };
 
     const onDelete = async (id) => {
-        try { await axiosClient.delete(`/faculties/${id}`); message.success('Deleted'); fetchFaculties(); } catch { message.error('Delete failed'); }
+        try { await axiosClient.delete(`/faculties/${id}`); message.success('Đã xóa'); fetchFaculties(); } catch { message.error('Xóa thất bại'); }
     };
 
     const onFinish = async (values) => {
         try {
             const payload = { ...values };
             if (values.school) payload.school = { id: values.school };
-            if (editing) { await axiosClient.put(`/faculties/${editing.id}`, payload); message.success('Updated'); }
-            else { await axiosClient.post('/faculties', payload); message.success('Created'); }
+            if (editing) { await axiosClient.put(`/faculties/${editing.id}`, payload); message.success('Đã cập nhật'); }
+            else { await axiosClient.post('/faculties', payload); message.success('Đã tạo'); }
             setModalVisible(false); fetchFaculties();
-        } catch { message.error('Save failed'); }
+        } catch { message.error('Lưu thất bại'); }
     };
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Faculty Management</Title>
-                    <Text type="secondary">Organizational structure of Faculties and Institutes</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý khoa/viện</Title>
+                    <Text type="secondary">Cơ cấu tổ chức các khoa và viện</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchFaculties} />
                 </Space>
@@ -157,15 +157,15 @@ const FacultyManagement = () => {
                 />
             </Card>
 
-            <Modal title={editing ? 'Edit Faculty' : 'Create Faculty'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+            <Modal title={editing ? 'Sửa khoa/viện' : 'Tạo khoa/viện'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="code" label="Faculty Code" rules={[{ required: true }]}>
+                    <Form.Item name="code" label="Mã khoa/viện" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="name" label="Faculty Name" rules={[{ required: true }]}>
+                    <Form.Item name="name" label="Tên khoa/viện" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="school" label="School (optional)">
+                    <Form.Item name="school" label="Trường (tuỳ chọn)">
                         <Select allowClear>
                             {schools.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
                         </Select>

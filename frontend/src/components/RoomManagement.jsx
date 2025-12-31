@@ -22,7 +22,7 @@ const RoomManagement = () => {
             const sorted = res.data.sort((a, b) => a.name.localeCompare(b.name));
             setRooms(sorted);
         } catch {
-            message.error("Failed to fetch rooms");
+            message.error("Không thể tải danh sách phòng");
         } finally {
             setLoading(false);
         }
@@ -40,7 +40,7 @@ const RoomManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error('Failed to download template');
+            message.error('Không thể tải file mẫu');
         }
     };
 
@@ -56,10 +56,10 @@ const RoomManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchRooms();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -67,7 +67,7 @@ const RoomManagement = () => {
     // Columns
     const columns = [
         {
-            title: 'Room Name',
+            title: 'Tên phòng',
             dataIndex: 'name',
             key: 'name',
             align: 'center',
@@ -76,7 +76,7 @@ const RoomManagement = () => {
             render: (text) => <Text strong style={{ fontSize: '16px' }}>{text}</Text>
         },
         {
-            title: 'Capacity',
+            title: 'Sức chứa',
             dataIndex: 'capacity',
             key: 'capacity',
             align: 'center',
@@ -85,7 +85,7 @@ const RoomManagement = () => {
             render: (cap) => <Tag color="geekblue" style={{ fontSize: '14px' }}>{cap}</Tag>
         },
         {
-            title: 'Type',
+            title: 'Loại',
             dataIndex: 'type',
             key: 'type',
             align: 'center',
@@ -114,15 +114,15 @@ const RoomManagement = () => {
             }
         },
         {
-            title: 'Actions',
+            title: 'Thao tác',
             key: 'actions',
             width: 160,
             align: 'center',
             render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this room?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa phòng này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -131,30 +131,30 @@ const RoomManagement = () => {
 
     const openCreate = () => { setEditing(null); form.resetFields(); setModalVisible(true); };
     const onEdit = (record) => { setEditing(record); form.setFieldsValue({ name: record.name, capacity: record.capacity, type: record.type }); setModalVisible(true); };
-    const onDelete = async (id) => { try { await axiosClient.delete(`/rooms/${id}`); message.success('Deleted'); fetchRooms(); } catch { message.error('Delete failed'); } };
+    const onDelete = async (id) => { try { await axiosClient.delete(`/rooms/${id}`); message.success('Đã xóa'); fetchRooms(); } catch { message.error('Xóa thất bại'); } };
 
     const onFinish = async (values) => {
         try {
-            if (editing) { await axiosClient.put(`/rooms/${editing.id}`, values); message.success('Updated'); }
-            else { await axiosClient.post('/rooms', values); message.success('Created'); }
+            if (editing) { await axiosClient.put(`/rooms/${editing.id}`, values); message.success('Đã cập nhật'); }
+            else { await axiosClient.post('/rooms', values); message.success('Đã tạo'); }
             setModalVisible(false); fetchRooms();
-        } catch { message.error('Save failed'); }
+        } catch { message.error('Lưu thất bại'); }
     };
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Room Management</Title>
-                    <Text type="secondary">Classrooms & Laboratories (Phòng học & Phòng máy)</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý phòng học</Title>
+                    <Text type="secondary">Phòng học & phòng máy</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchRooms} />
                 </Space>
@@ -170,20 +170,20 @@ const RoomManagement = () => {
                 />
             </Card>
 
-            <Modal title={editing ? 'Edit Room' : 'Create Room'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+            <Modal title={editing ? 'Sửa phòng' : 'Tạo phòng'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="name" label="Room Name" rules={[{ required: true }]}>
+                    <Form.Item name="name" label="Tên phòng" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="capacity" label="Capacity" rules={[{ required: true }]}>
+                    <Form.Item name="capacity" label="Sức chứa" rules={[{ required: true }]}>
                         <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
-                    <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-                        <Select placeholder="Select room type">
-                            <Option value="THEORY">THEORY (Classroom)</Option>
-                            <Option value="LAB">LAB (Computer Lab)</Option>
-                            <Option value="HALL">HALL (Hall / Field)</Option>
-                            <Option value="ONLINE">ONLINE (Virtual)</Option>
+                    <Form.Item name="type" label="Loại" rules={[{ required: true }]}>
+                        <Select placeholder="Chọn loại phòng">
+                            <Option value="THEORY">THEORY (Phòng học)</Option>
+                            <Option value="LAB">LAB (Phòng máy)</Option>
+                            <Option value="HALL">HALL (Hội trường/Sân bãi)</Option>
+                            <Option value="ONLINE">ONLINE (Trực tuyến)</Option>
                         </Select>
                     </Form.Item>
                 </Form>

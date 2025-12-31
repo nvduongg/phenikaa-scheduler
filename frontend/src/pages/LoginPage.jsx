@@ -20,18 +20,9 @@ const LoginPage = ({ onLoginSuccess }) => {
     const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
 
-    // --- EFFECT: Add Font & Animation Styles ---
+    // --- EFFECT: Add Animation Styles ---
     useEffect(() => {
-        // 1. Load Font Poppins
-        if (typeof document !== 'undefined' && !document.getElementById('poppins-font')) {
-            const link = document.createElement('link');
-            link.id = 'poppins-font';
-            link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap';
-            document.head.appendChild(link);
-        }
-
-        // 2. Add Keyframes for Fade In Animation
+        // Add Keyframes for Fade In Animation
         const styleSheet = document.createElement("style");
         styleSheet.innerText = `
             @keyframes fadeInUp {
@@ -54,11 +45,11 @@ const LoginPage = ({ onLoginSuccess }) => {
         setLoading(true);
         try {
             const res = await axios.post('http://localhost:8080/api/auth/login', values);
-            message.success({ content: `Welcome back, ${res.data.fullName}!`, key: 'login' });
+            message.success({ content: `Chào mừng trở lại, ${res.data.fullName}!`, key: 'login' });
             if (onLoginSuccess) onLoginSuccess(res.data);
             navigate('/'); 
         } catch (error) {
-            const errorMsg = error.response?.data?.message || "Login failed. Incorrect username or password.";
+            const errorMsg = error.response?.data?.message || "Đăng nhập thất bại. Sai tài khoản hoặc mật khẩu.";
             message.error({ content: errorMsg, key: 'login' });
         } finally {
             setLoading(false);
@@ -68,7 +59,7 @@ const LoginPage = ({ onLoginSuccess }) => {
     const handleSendResetRequest = () => {
         setRequestLoading(true);
         setTimeout(() => {
-            message.success("Request sent successfully! Admin will contact you via email.");
+            message.success("Đã gửi yêu cầu! Quản trị viên sẽ liên hệ với bạn qua email.");
             setRequestLoading(false);
             setIsForgotModalOpen(false);
         }, 1500);
@@ -90,8 +81,8 @@ const LoginPage = ({ onLoginSuccess }) => {
                     {/* Header */}
                     <div style={{ textAlign: 'center', marginBottom: 40 }}>
                         <img src={logo} alt="Phenikaa Logo" style={styles.logo} />
-                        <Title level={2} style={styles.title}>Hello Again!</Title>
-                        <Text style={styles.subtitle}>Welcome back to Phenikaa Internal System</Text>
+                        <Title level={2} style={styles.title}>Xin chào!</Title>
+                        <Text style={styles.subtitle}>Chào mừng bạn quay lại hệ thống nội bộ Phenikaa</Text>
                     </div>
 
                     <Form
@@ -104,29 +95,29 @@ const LoginPage = ({ onLoginSuccess }) => {
                     >
                         <Form.Item
                             name="username"
-                            rules={[{ required: true, message: 'Please enter your ID!' }]}
+                            rules={[{ required: true, message: 'Vui lòng nhập tài khoản/mã của bạn!' }]}
                         >
                             <Input 
                                 prefix={<UserOutlined style={{ color: '#003a70', opacity: 0.5 }} />} 
-                                placeholder="Username / Staff ID" 
+                                placeholder="Tài khoản / Mã CB-GV" 
                                 style={styles.input}
                             />
                         </Form.Item>
 
                         <Form.Item
                             name="password"
-                            rules={[{ required: true, message: 'Please enter your password!' }]}
+                            rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}
                         >
                             <Input.Password 
                                 prefix={<LockOutlined style={{ color: '#003a70', opacity: 0.5 }} />} 
-                                placeholder="Password" 
+                                placeholder="Mật khẩu" 
                                 style={styles.input}
                             />
                         </Form.Item>
 
                         <div style={styles.optionsRow}>
                             <Form.Item name="remember" valuePropName="checked" noStyle>
-                                <Checkbox style={{ color: '#666' }}>Remember me</Checkbox>
+                                <Checkbox style={{ color: '#666' }}>Ghi nhớ đăng nhập</Checkbox>
                             </Form.Item>
 
                             <Button 
@@ -134,7 +125,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                                 onClick={() => setIsForgotModalOpen(true)}
                                 style={styles.forgotBtn}
                             >
-                                Recovery Password
+                                Quên mật khẩu
                             </Button>
                         </div>
 
@@ -146,14 +137,14 @@ const LoginPage = ({ onLoginSuccess }) => {
                                 block
                                 style={styles.loginBtn}
                             >
-                                Login
+                                Đăng nhập
                             </Button>
                         </Form.Item>
                     </Form>
                     
                     <div style={styles.footer}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            © 2025 Phenikaa University. All Rights Reserved.
+                            © 2025 Đại học Phenikaa. Bảo lưu mọi quyền.
                         </Text>
                     </div>
                 </div>
@@ -161,29 +152,29 @@ const LoginPage = ({ onLoginSuccess }) => {
 
             {/* --- MODAL (Giữ nguyên logic) --- */}
             <Modal
-                title={<span><QuestionCircleOutlined /> Reset Password</span>}
+                title={<span><QuestionCircleOutlined /> Đặt lại mật khẩu</span>}
                 open={isForgotModalOpen}
                 onCancel={() => setIsForgotModalOpen(false)}
                 footer={null}
                 centered
             >
                 <Alert
-                    message="Support Policy"
-                    description="Please contact IT Department for password reset assistance."
+                    message="Chính sách hỗ trợ"
+                    description="Vui lòng liên hệ Phòng CNTT để được hỗ trợ đặt lại mật khẩu."
                     type="info"
                     showIcon
                     style={{ marginBottom: 20 }}
                 />
                 <Form onFinish={handleSendResetRequest} layout="vertical">
-                    <Form.Item name="username" label="Your ID" rules={[{ required: true }]}>
-                        <Input prefix={<UserOutlined />} placeholder="e.g. admin_psc" />
+                    <Form.Item name="username" label="Mã/Tài khoản" rules={[{ required: true }]}>
+                        <Input prefix={<UserOutlined />} placeholder="vd: admin_psc" />
                     </Form.Item>
-                    <Form.Item name="email" label="Email (Optional)">
-                        <Input prefix={<MailOutlined />} placeholder="name@phenikaa-uni.edu.vn" />
+                    <Form.Item name="email" label="Email (tuỳ chọn)">
+                        <Input prefix={<MailOutlined />} placeholder="ten@phenikaa-uni.edu.vn" />
                     </Form.Item>
                     <div style={{ textAlign: 'right', marginTop: 10 }}>
-                        <Button onClick={() => setIsForgotModalOpen(false)} style={{ marginRight: 10 }}>Close</Button>
-                        <Button type="primary" htmlType="submit" loading={requestLoading}>Send Request</Button>
+                        <Button onClick={() => setIsForgotModalOpen(false)} style={{ marginRight: 10 }}>Đóng</Button>
+                        <Button type="primary" htmlType="submit" loading={requestLoading}>Gửi yêu cầu</Button>
                     </div>
                 </Form>
             </Modal>
@@ -198,7 +189,7 @@ const styles = {
         height: '100vh',
         width: '100vw',
         overflow: 'hidden',
-        fontFamily: "'Poppins', sans-serif",
+        fontFamily: "'Inter', 'Montserrat', sans-serif",
         backgroundColor: '#ffffff',
     },
     // --- LEFT SIDE ---

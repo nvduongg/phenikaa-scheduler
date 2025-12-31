@@ -26,7 +26,7 @@ const LecturerManagement = () => {
             const res = await axiosClient.get('/lecturers');
             setLecturers(res.data);
         } catch {
-            message.error("Failed to fetch lecturers");
+            message.error("Không thể tải danh sách giảng viên");
         } finally {
             setLoading(false);
         }
@@ -54,10 +54,10 @@ const LecturerManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchLecturers();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -74,14 +74,14 @@ const LecturerManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     // Columns
     const columns = [
         {
-            title: 'Code',
+            title: 'Mã',
             dataIndex: 'lecturerCode',
             key: 'code',
             width: 100,
@@ -90,7 +90,7 @@ const LecturerManagement = () => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Full Name',
+            title: 'Họ tên',
             dataIndex: 'fullName',
             key: 'name',
             sorter: (a, b) => (a.fullName || '').localeCompare(b.fullName || ''),
@@ -108,7 +108,7 @@ const LecturerManagement = () => {
             render: (text) => <Text copyable>{text}</Text>
         },
         {
-            title: 'Faculty',
+            title: 'Khoa/Viện',
             dataIndex: ['faculty', 'name'],
             key: 'faculty',
             sorter: (a, b) => (a.faculty?.name || '').localeCompare(b.faculty?.name || ''),
@@ -116,22 +116,22 @@ const LecturerManagement = () => {
             render: (text) => <Tag color="purple">{text}</Tag>
         },
         {
-            title: 'Expertise',
+            title: 'Chuyên môn',
             dataIndex: 'teachingCourses',
             key: 'expertise',
             render: (courses) => (
                 <Space size={[0, 4]} wrap>
                     {courses && courses.slice(0, 3).map(c => <Tag key={c.id}>{c.courseCode}</Tag>)}
-                    {courses && courses.length > 3 && <Tag>+{courses.length - 3} more</Tag>}
+                    {courses && courses.length > 3 && <Tag>+{courses.length - 3} nữa</Tag>}
                 </Space>
             )
         }
         ,{
-            title: 'Actions', key: 'actions', width: 180, render: (_, record) => (
+            title: 'Thao tác', key: 'actions', width: 180, render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this lecturer?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa giảng viên này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -157,7 +157,7 @@ const LecturerManagement = () => {
         setModalVisible(true); 
     };
 
-    const onDelete = async (id) => { try { await axiosClient.delete(`/lecturers/${id}`); message.success('Deleted'); fetchLecturers(); } catch { message.error('Delete failed'); } };
+    const onDelete = async (id) => { try { await axiosClient.delete(`/lecturers/${id}`); message.success('Đã xóa'); fetchLecturers(); } catch { message.error('Xóa thất bại'); } };
 
     const onFinish = async (values) => {
         try {
@@ -166,10 +166,10 @@ const LecturerManagement = () => {
             // Attach selected courses
             payload.teachingCourses = selectedCourseIds.map(id => ({ id }));
             
-            if (editing) { await axiosClient.put(`/lecturers/${editing.id}`, payload); message.success('Updated'); }
-            else { await axiosClient.post('/lecturers', payload); message.success('Created'); }
+            if (editing) { await axiosClient.put(`/lecturers/${editing.id}`, payload); message.success('Đã cập nhật'); }
+            else { await axiosClient.post('/lecturers', payload); message.success('Đã tạo'); }
             setModalVisible(false); fetchLecturers();
-        } catch { message.error('Save failed'); }
+        } catch { message.error('Lưu thất bại'); }
     };
 
     // Filtered courses for modal
@@ -179,25 +179,25 @@ const LecturerManagement = () => {
     );
 
     const courseColumns = [
-        { title: 'Code', dataIndex: 'courseCode', width: 120 },
-        { title: 'Name', dataIndex: 'name' },
-        { title: 'Credits', dataIndex: 'credits', width: 80 },
+        { title: 'Mã', dataIndex: 'courseCode', width: 120 },
+        { title: 'Tên', dataIndex: 'name' },
+        { title: 'TC', dataIndex: 'credits', width: 80 },
     ];
 
     return (
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Lecturer Management</Title>
-                    <Text type="secondary">Manage Academic Staff (Quản lý giảng viên)</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý giảng viên</Title>
+                    <Text type="secondary">Quản lý giảng viên</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchLecturers} />
                 </Space>
@@ -213,26 +213,26 @@ const LecturerManagement = () => {
                 />
             </Card>
 
-            <Modal title={editing ? 'Edit Lecturer' : 'Create Lecturer'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+            <Modal title={editing ? 'Sửa giảng viên' : 'Tạo giảng viên'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="lecturerCode" label="Lecturer Code" rules={[{ required: true }]}>
+                    <Form.Item name="lecturerCode" label="Mã giảng viên" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="fullName" label="Full Name" rules={[{ required: true }]}>
+                    <Form.Item name="fullName" label="Họ tên" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
                     <Form.Item name="email" label="Email">
                         <Input />
                     </Form.Item>
-                    <Form.Item name="faculty" label="Faculty" rules={[{ required: true }]}>
+                    <Form.Item name="faculty" label="Khoa/Viện" rules={[{ required: true }]}>
                         <Select>
                             {faculties.map(f => <Select.Option key={f.id} value={f.id}>{f.name}</Select.Option>)}
                         </Select>
                     </Form.Item>
                     
-                    <Form.Item label="Expertise (Teaching Courses)">
+                    <Form.Item label="Chuyên môn (Học phần giảng dạy)">
                         <Button type="dashed" onClick={() => setExpertiseModalVisible(true)} style={{ width: '100%', marginBottom: 8 }}>
-                            Select Courses ({selectedCourseIds.length} selected)
+                            Chọn học phần (đã chọn {selectedCourseIds.length})
                         </Button>
                         <div style={{ maxHeight: 100, overflowY: 'auto', border: '1px solid #f0f0f0', padding: 8, borderRadius: 4 }}>
                             {selectedCourseIds.length > 0 ? (
@@ -243,7 +243,7 @@ const LecturerManagement = () => {
                                         </Tag>
                                     ))}
                                 </Space>
-                            ) : <Text type="secondary">No courses selected</Text>}
+                            ) : <Text type="secondary">Chưa chọn học phần</Text>}
                         </div>
                     </Form.Item>
                 </Form>
@@ -251,7 +251,7 @@ const LecturerManagement = () => {
 
             {/* Expertise Selection Modal */}
             <Modal
-                title="Select Expertise Courses"
+                title="Chọn học phần chuyên môn"
                 open={expertiseModalVisible}
                 onOk={() => setExpertiseModalVisible(false)}
                 onCancel={() => setExpertiseModalVisible(false)}
@@ -260,7 +260,7 @@ const LecturerManagement = () => {
             >
                 <div style={{ padding: 16 }}>
                     <Input.Search 
-                        placeholder="Search by code or name..." 
+                        placeholder="Tìm theo mã hoặc tên..." 
                         onChange={e => setSearchText(e.target.value)} 
                         style={{ marginBottom: 16 }}
                     />

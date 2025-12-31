@@ -31,7 +31,7 @@ const OfferingManagement = ({ user }) => {
             const sortedData = response.data.sort((a, b) => a.code.localeCompare(b.code));
             setData(sortedData);
         } catch (error) {
-            message.error('Failed to load data: ' + error.message);
+            message.error('Không thể tải dữ liệu: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -78,10 +78,10 @@ const OfferingManagement = ({ user }) => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} uploaded successfully.`);
+                message.success(`Đã tải lên ${info.file.name} thành công.`);
                 fetchData(); 
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} upload failed.`);
+                message.error(`Tải lên ${info.file.name} thất bại.`);
             }
         },
     };
@@ -97,7 +97,7 @@ const OfferingManagement = ({ user }) => {
             link.click();
             link.remove();
         } catch {
-            message.error('Failed to download template');
+            message.error('Không thể tải file mẫu');
         }
     };
 
@@ -108,7 +108,7 @@ const OfferingManagement = ({ user }) => {
             message.success(res.data);
             fetchData(); 
         } catch (error) {
-            message.error("Auto-assign failed: " + error.message);
+            message.error("Tự phân công thất bại: " + error.message);
         } finally {
             setLoading(false);
         }
@@ -125,11 +125,11 @@ const OfferingManagement = ({ user }) => {
             await axiosClient.put(`/offerings/${selectedOffering.id}/lecturer`, null, {
                 params: { lecturerId: selectedLecturerId }
             });
-            message.success("Assigned lecturer successfully");
+            message.success("Đã gán giảng viên thành công");
             setAssignModalVisible(false);
             fetchData();
         } catch {
-            message.error("Failed to assign lecturer");
+            message.error("Gán giảng viên thất bại");
         }
     };
 
@@ -190,33 +190,33 @@ const OfferingManagement = ({ user }) => {
 
             if (editingOffering) {
                 await axiosClient.put(`/offerings/${editingOffering.id}`, payload);
-                message.success('Updated offering successfully');
+                message.success('Đã cập nhật mở lớp');
             } else {
                 await axiosClient.post('/offerings', payload);
-                message.success('Created offering successfully');
+                message.success('Đã tạo mở lớp');
             }
 
             setEditModalVisible(false);
             fetchData();
         } catch (error) {
             if (error?.errorFields) return; // validation error
-            message.error('Failed to save offering');
+            message.error('Lưu mở lớp thất bại');
         }
     };
 
     const handleDeleteOffering = async (record) => {
         try {
             await axiosClient.delete(`/offerings/${record.id}`);
-            message.success('Deleted offering');
+            message.success('Đã xóa mở lớp');
             fetchData();
         } catch {
-            message.error('Failed to delete offering');
+            message.error('Xóa mở lớp thất bại');
         }
     };
 
     const columns = [
         {
-            title: 'Class Code',
+            title: 'Mã lớp',
             dataIndex: 'code',
             key: 'code',
             width: 230,
@@ -226,9 +226,9 @@ const OfferingManagement = ({ user }) => {
         },
         // --- CỘT MỚI: TYPE & PARENT ---
         {
-            title: 'Type',
+            title: 'Loại',
             key: 'type',
-            width: 150,
+            width: 100,
             align: 'center',
             sorter: (a, b) => ((a.classType || '')).localeCompare(b.classType || ''),
             sortDirections: ['ascend', 'descend'],
@@ -246,9 +246,9 @@ const OfferingManagement = ({ user }) => {
                         
                         {/* Nếu là lớp TH và có Parent, hiển thị mã Parent */}
                         {typeText === 'TH' && record.parent && (
-                            <Tooltip title={`Parent Class: ${record.parent.code}`}>
+                            <Tooltip title={`Lớp mẹ: ${record.parent.code}`}>
                                 <div style={{ fontSize: '11px', color: '#888', marginTop: 4 }}>
-                                    <NodeIndexOutlined /> Parent: {record.parent.code.split('-').pop()}...
+                                    <NodeIndexOutlined /> Mẹ: {record.parent.code.split('-').pop()}...
                                 </div>
                             </Tooltip>
                         )}
@@ -258,7 +258,7 @@ const OfferingManagement = ({ user }) => {
         },
         // -----------------------------
         {
-            title: 'Course',
+            title: 'Học phần',
             dataIndex: 'course',
             key: 'course',
             sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
@@ -271,17 +271,17 @@ const OfferingManagement = ({ user }) => {
             )
         },
         {
-            title: 'Size',
+            title: 'Sĩ số',
             dataIndex: 'plannedSize',
             key: 'plannedSize',
             align: 'center',
-            width: 80,
+            width: 100,
             sorter: (a, b) => (a.plannedSize || 0) - (b.plannedSize || 0),
             sortDirections: ['ascend', 'descend'],
             render: (size) => <Tag color="volcano">{size}</Tag>
         },
         {
-            title: 'Assigned Lecturer',
+            title: 'Giảng viên phụ trách',
             dataIndex: 'lecturer',
             key: 'lecturer',
             sorter: (a, b) => ((a.lecturer?.fullName || '')).localeCompare(b.lecturer?.fullName || ''),
@@ -317,20 +317,20 @@ const OfferingManagement = ({ user }) => {
             }
         },
         {
-            title: 'Actions',
+            title: 'Thao tác',
             key: 'actions',
             width: 160,
             render: (_, record) => (
                 <Space>
                     <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
-                        Edit
+                        Sửa
                     </Button>
                     <Popconfirm
-                        title="Delete offering"
-                        description={`Are you sure to delete ${record.code}?`}
+                        title="Xóa mở lớp"
+                        description={`Bạn có chắc muốn xóa ${record.code}?`}
                         onConfirm={() => handleDeleteOffering(record)}
                     >
-                        <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+                        <Button size="small" danger icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -341,8 +341,8 @@ const OfferingManagement = ({ user }) => {
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Course Offering Management</Title>
-                    <Text type="secondary">Input Demand for Timetabling</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý mở lớp học phần</Title>
+                    <Text type="secondary">Nhập nhu cầu phục vụ xếp thời khóa biểu</Text>
                 </div>
                 <Space>
                     <Button
@@ -350,7 +350,7 @@ const OfferingManagement = ({ user }) => {
                         icon={<PlusOutlined />}
                         onClick={openCreateModal}
                     >
-                        New Offering
+                        Thêm mở lớp
                     </Button>
                     <Button 
                         type="primary" 
@@ -359,14 +359,14 @@ const OfferingManagement = ({ user }) => {
                         onClick={handleAutoAssign}
                         loading={loading}
                     >
-                        Auto Assign Lecturers
+                        Tự phân công giảng viên
                     </Button>
 
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
                     <Upload {...uploadProps}>
-                        <Button type="default" icon={<UploadOutlined />}>Import Plan</Button>
+                        <Button type="default" icon={<UploadOutlined />}>Nhập kế hoạch</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchData} />
                 </Space>
@@ -383,15 +383,15 @@ const OfferingManagement = ({ user }) => {
             </Card>
 
             <Modal
-                title={`Assign Lecturer for ${selectedOffering?.code}`}
+                title={`Gán giảng viên cho ${selectedOffering?.code}`}
                 open={assignModalVisible}
                 onOk={handleAssignLecturer}
                 onCancel={() => setAssignModalVisible(false)}
             >
-                <Text>Select Lecturer:</Text>
+                <Text>Chọn giảng viên:</Text>
                 <Select
                     style={{ width: '100%', marginTop: 8 }}
-                    placeholder="Select a lecturer"
+                    placeholder="Chọn giảng viên"
                     value={selectedLecturerId}
                     onChange={setSelectedLecturerId}
                     showSearch
@@ -410,7 +410,7 @@ const OfferingManagement = ({ user }) => {
             </Modal>
 
             <Modal
-                title={editingOffering ? `Edit Offering: ${editingOffering.code}` : 'New Offering'}
+                title={editingOffering ? `Sửa mở lớp: ${editingOffering.code}` : 'Thêm mở lớp'}
                 open={editModalVisible}
                 onOk={handleSaveOffering}
                 onCancel={() => setEditModalVisible(false)}
@@ -418,21 +418,21 @@ const OfferingManagement = ({ user }) => {
             >
                 <Form form={form} layout="vertical">
                     <Form.Item
-                        label="Class Code"
+                        label="Mã lớp"
                         name="code"
-                        rules={[{ required: true, message: 'Please input class code' }]}
+                        rules={[{ required: true, message: 'Vui lòng nhập mã lớp' }]}
                     >
-                        <Input placeholder="2025_JAVA_01" />
+                        <Input placeholder="vd: 2025_JAVA_01" />
                     </Form.Item>
 
                     <Form.Item
-                        label="Course"
+                        label="Học phần"
                         name="courseId"
-                        rules={[{ required: true, message: 'Please select course' }]}
+                        rules={[{ required: true, message: 'Vui lòng chọn học phần' }]}
                     >
                         <Select
                             showSearch
-                            placeholder="Select course"
+                            placeholder="Chọn học phần"
                             optionFilterProp="children"
                             filterOption={(input, option) =>
                                 (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
@@ -464,21 +464,21 @@ const OfferingManagement = ({ user }) => {
                     </Form.Item>
 
                     <Form.Item
-                        label="Planned Size"
+                        label="Sĩ số dự kiến"
                         name="plannedSize"
-                        rules={[{ required: true, message: 'Please input planned size' }]}
+                        rules={[{ required: true, message: 'Vui lòng nhập sĩ số dự kiến' }]}
                     >
-                        <Input type="number" min={1} placeholder="60" />
+                        <Input type="number" min={1} placeholder="vd: 60" />
                     </Form.Item>
 
                     <Form.Item
-                        label="Target Classes"
+                        label="Lớp hành chính mục tiêu"
                         name="targetClasses"
                     >
                         <Select
                             mode="multiple"
                             allowClear
-                            placeholder="Select target admin classes"
+                            placeholder="Chọn lớp hành chính"
                             showSearch
                             optionFilterProp="children"
                             filterOption={(input, option) =>
@@ -494,7 +494,7 @@ const OfferingManagement = ({ user }) => {
                     </Form.Item>
 
                     <Form.Item
-                        label="Class Type"
+                        label="Loại lớp"
                         name="classType"
                         initialValue="ALL"
                     >
@@ -507,12 +507,12 @@ const OfferingManagement = ({ user }) => {
                     </Form.Item>
 
                     <Form.Item
-                        label="Parent Class Code (for TH)"
+                        label="Mã lớp mẹ (cho TH)"
                         name="parentCode"
                     >
                         <Select
                             allowClear
-                            placeholder="Select parent LT/ALL/ELN class"
+                            placeholder="Chọn lớp mẹ (LT/ALL/ELN)"
                             showSearch
                             optionFilterProp="children"
                             filterOption={(input, option) =>

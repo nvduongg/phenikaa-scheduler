@@ -18,7 +18,7 @@ const SchoolManagement = () => {
             const res = await axiosClient.get('/schools');
             setSchools(res.data);
         } catch {
-            message.error("Failed to fetch schools");
+            message.error("Không thể tải danh sách trường");
         } finally {
             setLoading(false);
         }
@@ -35,10 +35,10 @@ const SchoolManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchSchools();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -54,13 +54,13 @@ const SchoolManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     const columns = [
         {
-            title: 'School Code',
+            title: 'Mã trường',
             dataIndex: 'code',
             key: 'code',
             width: 150,
@@ -69,7 +69,7 @@ const SchoolManagement = () => {
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
-            title: 'School Name',
+            title: 'Tên trường',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
@@ -77,14 +77,14 @@ const SchoolManagement = () => {
             render: (text) => <Text strong style={{ fontSize: '15px' }}>{text}</Text>
         }
         ,{
-            title: 'Actions',
+            title: 'Thao tác',
             key: 'actions',
             width: 150,
             render: (_, record) => (
                 <Space>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this school?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger icon={<DeleteOutlined />} size="small">Delete</Button>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa trường này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger icon={<DeleteOutlined />} size="small">Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -106,10 +106,10 @@ const SchoolManagement = () => {
     const onDelete = async (id) => {
         try {
             await axiosClient.delete(`/schools/${id}`);
-            message.success('Deleted');
+            message.success('Đã xóa');
             fetchSchools();
         } catch {
-            message.error('Delete failed');
+            message.error('Xóa thất bại');
         }
     };
 
@@ -117,15 +117,15 @@ const SchoolManagement = () => {
         try {
             if (editing) {
                 await axiosClient.put(`/schools/${editing.id}`, values);
-                message.success('Updated');
+                message.success('Đã cập nhật');
             } else {
                 await axiosClient.post('/schools', values);
-                message.success('Created');
+                message.success('Đã tạo');
             }
             setModalVisible(false);
             fetchSchools();
         } catch (e) {
-            message.error('Save failed');
+            message.error('Lưu thất bại');
         }
     };
 
@@ -133,16 +133,16 @@ const SchoolManagement = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>School Management</Title>
-                    <Text type="secondary">List of Member Schools within Phenikaa University</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý trường thành viên</Title>
+                    <Text type="secondary">Danh sách các trường thành viên thuộc Đại học Phenikaa</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchSchools} />
                 </Space>
@@ -159,17 +159,17 @@ const SchoolManagement = () => {
             </Card>
 
             <Modal
-                title={editing ? 'Edit School' : 'Create School'}
+                title={editing ? 'Sửa trường' : 'Tạo trường'}
                 open={modalVisible}
                 onCancel={() => setModalVisible(false)}
                 onOk={() => form.submit()}
                 destroyOnClose
             >
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="code" label="School Code" rules={[{ required: true }]}>
+                    <Form.Item name="code" label="Mã trường" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="name" label="School Name" rules={[{ required: true }]}>
+                    <Form.Item name="name" label="Tên trường" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
                 </Form>

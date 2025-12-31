@@ -19,7 +19,7 @@ const SemesterManagement = () => {
             // Sort kỳ mới nhất lên đầu
             setSemesters(res.data.sort((a, b) => b.id - a.id));
         } catch {
-            message.error("Failed to load semesters");
+            message.error("Không thể tải danh sách học kỳ");
         } finally {
             setLoading(false);
         }
@@ -32,28 +32,28 @@ const SemesterManagement = () => {
     const handleCreate = async (values) => {
         try {
             await axiosClient.post('/semesters', values);
-            message.success("Semester created");
+            message.success("Đã tạo học kỳ");
             setIsModalOpen(false);
             form.resetFields();
             fetchSemesters();
         } catch {
-            message.error("Failed to create semester");
+            message.error("Không thể tạo học kỳ");
         }
     };
 
     const handleSetCurrent = async (id) => {
         try {
             await axiosClient.post(`/semesters/${id}/set-current`);
-            message.success("Active semester updated");
+            message.success("Đã cập nhật học kỳ hiện hành");
             fetchSemesters();
         } catch {
-            message.error("Update failed");
+            message.error("Cập nhật thất bại");
         }
     };
 
     const columns = [
         {
-            title: 'Semester Name',
+            title: 'Tên học kỳ',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
@@ -61,7 +61,7 @@ const SemesterManagement = () => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Academic Year',
+            title: 'Năm học',
             dataIndex: 'academicYear',
             key: 'year',
             sorter: (a, b) => (a.academicYear || '').localeCompare(b.academicYear || ''),
@@ -69,14 +69,14 @@ const SemesterManagement = () => {
             render: (text) => <Tag color="blue">{text}</Tag>
         },
         {
-            title: 'Status',
+            title: 'Trạng thái',
             dataIndex: 'isCurrent',
             key: 'status',
             align: 'center',
             render: (isCurrent, record) => (
                 isCurrent ? 
-                <Tag color="success" icon={<CheckCircleOutlined />}>ACTIVE</Tag> : 
-                <Button type="link" size="small" onClick={() => handleSetCurrent(record.id)}>Set Active</Button>
+                <Tag color="success" icon={<CheckCircleOutlined />}>ĐANG ÁP DỤNG</Tag> : 
+                <Button type="link" size="small" onClick={() => handleSetCurrent(record.id)}>Đặt làm hiện hành</Button>
             )
         }
     ];
@@ -85,11 +85,11 @@ const SemesterManagement = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Semester Management</Title>
-                    <Text type="secondary">Define academic terms and set the active scheduling period</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý học kỳ</Title>
+                    <Text type="secondary">Thiết lập học kỳ và chọn học kỳ dùng để xếp lịch</Text>
                 </div>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-                    New Semester
+                    Thêm học kỳ
                 </Button>
             </div>
 
@@ -103,28 +103,28 @@ const SemesterManagement = () => {
                 />
             </Card>
 
-            <Modal title="Create New Semester" open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={() => form.submit()}>
+            <Modal title="Tạo học kỳ mới" open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={() => form.submit()}>
                 <Form form={form} layout="vertical" onFinish={handleCreate}>
-                    <Form.Item name="name" label="Semester Name" rules={[{ required: true }]}>
-                        <Input placeholder="e.g., Hoc ky 1 Nam 2025-2026" />
+                    <Form.Item name="name" label="Tên học kỳ" rules={[{ required: true }]}>
+                        <Input placeholder="Ví dụ: Học kỳ 1 năm 2025-2026" />
                     </Form.Item>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="academicYear" label="Academic Year" rules={[{ required: true }]}>
-                                <Input placeholder="2025-2026" />
+                            <Form.Item name="academicYear" label="Năm học" rules={[{ required: true }]}>
+                                <Input placeholder="Ví dụ: 2025-2026" />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="term" label="Term" rules={[{ required: true }]}>
+                            <Form.Item name="term" label="Học kỳ" rules={[{ required: true }]}>
                                 <Select>
-                                    <Option value={1}>Term 1</Option>
-                                    <Option value={2}>Term 2</Option>
-                                    <Option value={3}>Summer Term</Option>
+                                    <Option value={1}>Học kỳ 1</Option>
+                                    <Option value={2}>Học kỳ 2</Option>
+                                    <Option value={3}>Học kỳ hè</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
                     </Row>
-                    <Form.Item name="isCurrent" valuePropName="checked" label="Set as Active Semester?">
+                    <Form.Item name="isCurrent" valuePropName="checked" label="Đặt làm học kỳ hiện hành?">
                         <Switch />
                     </Form.Item>
                 </Form>

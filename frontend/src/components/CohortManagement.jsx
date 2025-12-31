@@ -21,7 +21,7 @@ const CohortManagement = () => {
             const sorted = res.data.sort((a, b) => a.name.localeCompare(b.name));
             setCohorts(sorted);
         } catch {
-            message.error("Failed to fetch cohorts");
+            message.error("Không thể tải danh sách khóa sinh viên");
         } finally {
             setLoading(false);
         }
@@ -35,14 +35,14 @@ const CohortManagement = () => {
 
     const onEdit = (record) => { setEditing(record); form.setFieldsValue({ name: record.name, startYear: record.startYear, endYear: record.endYear }); setModalVisible(true); };
 
-    const onDelete = async (id) => { try { await axiosClient.delete(`/cohorts/${id}`); message.success('Deleted'); fetchCohorts(); } catch { message.error('Delete failed'); } };
+    const onDelete = async (id) => { try { await axiosClient.delete(`/cohorts/${id}`); message.success('Đã xóa'); fetchCohorts(); } catch { message.error('Xóa thất bại'); } };
 
     const onFinish = async (values) => {
         try {
-            if (editing) { await axiosClient.put(`/cohorts/${editing.id}`, values); message.success('Updated'); }
-            else { await axiosClient.post('/cohorts', values); message.success('Created'); }
+            if (editing) { await axiosClient.put(`/cohorts/${editing.id}`, values); message.success('Đã cập nhật'); }
+            else { await axiosClient.post('/cohorts', values); message.success('Đã tạo'); }
             setModalVisible(false); fetchCohorts();
-        } catch { message.error('Save failed'); }
+        } catch { message.error('Lưu thất bại'); }
     };
 
     // Upload
@@ -53,10 +53,10 @@ const CohortManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchCohorts();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -73,14 +73,14 @@ const CohortManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     // Columns
     const columns = [
         {
-            title: 'Cohort Name',
+            title: 'Khóa',
             dataIndex: 'name',
             key: 'name',
             align: 'center',
@@ -89,7 +89,7 @@ const CohortManagement = () => {
             render: (text) => <Tag color="geekblue" style={{ fontSize: '14px', padding: '5px 10px' }}>{text}</Tag>
         },
         {
-            title: 'Academic Period',
+            title: 'Niên khóa',
             key: 'period',
             align: 'center',
             sorter: (a, b) => (a.startYear || 0) - (b.startYear || 0),
@@ -101,11 +101,11 @@ const CohortManagement = () => {
             )
         }
         ,{
-            title: 'Actions', key: 'actions', width: 150, render: (_, record) => (
+            title: 'Thao tác', key: 'actions', width: 150, render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this cohort?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa khóa này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -116,16 +116,16 @@ const CohortManagement = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Cohort Management</Title>
-                    <Text type="secondary">Student Intakes (Khóa sinh viên)</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý khóa sinh viên</Title>
+                    <Text type="secondary">Danh mục khóa sinh viên</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchCohorts} />
                 </Space>
@@ -141,15 +141,15 @@ const CohortManagement = () => {
                 />
             </Card>
 
-            <Modal title={editing ? 'Edit Cohort' : 'Create Cohort'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+            <Modal title={editing ? 'Sửa khóa' : 'Tạo khóa'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="name" label="Cohort Name" rules={[{ required: true }]}>
-                        <Input placeholder="e.g. K17" />
+                    <Form.Item name="name" label="Khóa" rules={[{ required: true }]}>
+                        <Input placeholder="vd: K17" />
                     </Form.Item>
-                    <Form.Item name="startYear" label="Start Year">
+                    <Form.Item name="startYear" label="Năm bắt đầu">
                         <InputNumber style={{ width: '100%' }} />
                     </Form.Item>
-                    <Form.Item name="endYear" label="End Year">
+                    <Form.Item name="endYear" label="Năm kết thúc">
                         <InputNumber style={{ width: '100%' }} />
                     </Form.Item>
                 </Form>

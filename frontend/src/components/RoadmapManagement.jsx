@@ -35,7 +35,7 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
 
             setDetails(sorted);
         } catch {
-            message.error("Failed to fetch roadmap details");
+            message.error("Không thể tải chi tiết lộ trình");
         } finally {
             setLoading(false);
         }
@@ -70,10 +70,10 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchDetails();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -89,13 +89,13 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     const columns = [
         {
-            title: 'Semester',
+            title: 'Học kỳ',
             dataIndex: 'semesterIndex',
             key: 'sem',
             align: 'center',
@@ -104,13 +104,13 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
                 const sems = sem.toString().split(',');
                 return (
                     <Space size={4}>
-                        {sems.map(s => <Tag color="blue" key={s}>Sem {s.trim()}</Tag>)}
+                        {sems.map(s => <Tag color="blue" key={s}>HK {s.trim()}</Tag>)}
                     </Space>
                 );
             }
         },
         {
-            title: 'Course Code',
+            title: 'Mã học phần',
             dataIndex: ['course', 'courseCode'],
             key: 'code',
             sorter: (a, b) => ((a.course?.courseCode || '')).localeCompare(b.course?.courseCode || ''),
@@ -118,7 +118,7 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             render: (text) => <Text code>{text}</Text>
         },
         {
-            title: 'Course Name',
+            title: 'Tên học phần',
             dataIndex: ['course', 'name'],
             key: 'courseName',
             sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
@@ -126,7 +126,7 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Credits',
+            title: 'Tín chỉ',
             dataIndex: ['course', 'credits'],
             key: 'credits',
             align: 'center',
@@ -142,19 +142,19 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
             return (
                 <div>
                     <Button type="link" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ paddingLeft: 0 }}>
-                        Back to Curricula
+                        Quay lại Khung CTĐT
                     </Button>
                     <Title level={3} style={{ margin: 0 }}>
-                        Roadmap: <span style={{ color: '#0054a6' }}>{targetCurriculum.name}</span>
+                        Lộ trình: <span style={{ color: '#0054a6' }}>{targetCurriculum.name}</span>
                     </Title>
-                    <Text type="secondary">Detailed course sequence for {targetCurriculum.cohort.name} - {targetCurriculum.major.name}</Text>
+                    <Text type="secondary">Lộ trình học phần chi tiết cho {targetCurriculum.cohort.name} - {targetCurriculum.major.name}</Text>
                 </div>
             );
         }
         return (
             <div>
-                <Title level={3} style={{ margin: 0 }}>Roadmap Management</Title>
-                <Text type="secondary">All Course Sequences</Text>
+                <Title level={3} style={{ margin: 0 }}>Quản lý lộ trình</Title>
+                <Text type="secondary">Tất cả lộ trình học phần</Text>
             </div>
         );
     };
@@ -165,10 +165,10 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
                 {renderHeaderTitle()}
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchDetails} />
                 </Space>
@@ -180,7 +180,7 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
                 <Space direction="vertical" style={{ width: '100%' }} size="middle">
                     {sortedSemesters.length > 0 ? (
                         sortedSemesters.map(sem => (
-                            <Card key={sem} title={`Semester ${sem}`} size="small" type="inner">
+                            <Card key={sem} title={`Học kỳ ${sem}`} size="small" type="inner">
                                 <Table 
                                     rowKey="id"
                                     columns={columns.filter(c => c.key !== 'sem')} 
@@ -191,7 +191,7 @@ const RoadmapManagement = ({ targetCurriculum, onBack }) => {
                             </Card>
                         ))
                     ) : (
-                        <Card><Text type="secondary">No roadmap data found.</Text></Card>
+                        <Card><Text type="secondary">Không có dữ liệu lộ trình.</Text></Card>
                     )}
                 </Space>
             )}

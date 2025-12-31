@@ -20,7 +20,7 @@ const MajorManagement = () => {
             const res = await axiosClient.get('/majors');
             setMajors(res.data);
         } catch {
-            message.error("Failed to fetch majors");
+            message.error("Không thể tải danh sách ngành/chuyên ngành");
         } finally {
             setLoading(false);
         }
@@ -43,10 +43,10 @@ const MajorManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchMajors();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -63,14 +63,14 @@ const MajorManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     // 4. Columns
     const columns = [
         {
-            title: 'Major Code',
+            title: 'Mã ngành',
             dataIndex: 'code',
             key: 'code',
             width: 150,
@@ -79,7 +79,7 @@ const MajorManagement = () => {
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
-            title: 'Major Name',
+            title: 'Tên ngành',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
@@ -87,7 +87,7 @@ const MajorManagement = () => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Managing Faculty',
+            title: 'Khoa quản lý',
             dataIndex: ['faculty', 'name'], // Nested object access
             key: 'faculty',
             sorter: (a, b) => (a.faculty?.name || '').localeCompare(b.faculty?.name || ''),
@@ -95,11 +95,11 @@ const MajorManagement = () => {
             render: (text) => <Tag color="purple">{text}</Tag>
         }
         ,{
-            title: 'Actions', key: 'actions', width: 150, render: (_, record) => (
+            title: 'Thao tác', key: 'actions', width: 150, render: (_, record) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Edit</Button>
-                    <Popconfirm title="Delete this major?" onConfirm={() => onDelete(record.id)}>
-                        <Button danger size="small" icon={<DeleteOutlined />}>Delete</Button>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => onEdit(record)}>Sửa</Button>
+                    <Popconfirm title="Xóa ngành này?" onConfirm={() => onDelete(record.id)}>
+                        <Button danger size="small" icon={<DeleteOutlined />}>Xóa</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -110,16 +110,16 @@ const MajorManagement = () => {
 
     const onEdit = (record) => { setEditing(record); form.setFieldsValue({ code: record.code, name: record.name, faculty: record.faculty?.id }); setModalVisible(true); };
 
-    const onDelete = async (id) => { try { await axiosClient.delete(`/majors/${id}`); message.success('Deleted'); fetchMajors(); } catch { message.error('Delete failed'); } };
+    const onDelete = async (id) => { try { await axiosClient.delete(`/majors/${id}`); message.success('Đã xóa'); fetchMajors(); } catch { message.error('Xóa thất bại'); } };
 
     const onFinish = async (values) => {
         try {
             const payload = { ...values };
             if (values.faculty) payload.faculty = { id: values.faculty };
-            if (editing) { await axiosClient.put(`/majors/${editing.id}`, payload); message.success('Updated'); }
-            else { await axiosClient.post('/majors', payload); message.success('Created'); }
+            if (editing) { await axiosClient.put(`/majors/${editing.id}`, payload); message.success('Đã cập nhật'); }
+            else { await axiosClient.post('/majors', payload); message.success('Đã tạo'); }
             setModalVisible(false); fetchMajors();
-        } catch { message.error('Save failed'); }
+        } catch { message.error('Lưu thất bại'); }
     };
 
     return (
@@ -127,16 +127,16 @@ const MajorManagement = () => {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Major Management</Title>
-                    <Text type="secondary">Academic Majors / Specializations</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý ngành/chuyên ngành</Title>
+                    <Text type="secondary">Danh mục ngành/chuyên ngành đào tạo</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>New</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Thêm mới</Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchMajors} />
                 </Space>
@@ -153,15 +153,15 @@ const MajorManagement = () => {
                 />
             </Card>
 
-            <Modal title={editing ? 'Edit Major' : 'Create Major'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
+            <Modal title={editing ? 'Sửa ngành' : 'Tạo ngành'} open={modalVisible} onCancel={() => setModalVisible(false)} onOk={() => form.submit()} destroyOnClose>
                 <Form form={form} layout="vertical" onFinish={onFinish}>
-                    <Form.Item name="code" label="Major Code" rules={[{ required: true }]}>
+                    <Form.Item name="code" label="Mã ngành" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="name" label="Major Name" rules={[{ required: true }]}>
+                    <Form.Item name="name" label="Tên ngành" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="faculty" label="Faculty" rules={[{ required: true }]}>
+                    <Form.Item name="faculty" label="Khoa/viện" rules={[{ required: true }]}>
                         <Select>
                             {faculties.map(f => <Select.Option key={f.id} value={f.id}>{f.name}</Select.Option>)}
                         </Select>

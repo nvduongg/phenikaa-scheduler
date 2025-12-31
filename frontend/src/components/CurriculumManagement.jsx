@@ -16,7 +16,7 @@ const CurriculumManagement = ({ onNavigate }) => {
             const res = await axiosClient.get('/curricula');
             setCurricula(res.data);
         } catch {
-            message.error("Failed to fetch curricula");
+            message.error("Không thể tải danh sách khung CTĐT");
         } finally {
             setLoading(false);
         }
@@ -33,10 +33,10 @@ const CurriculumManagement = ({ onNavigate }) => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchCurricula();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -52,13 +52,13 @@ const CurriculumManagement = ({ onNavigate }) => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
 
     const columns = [
         {
-            title: 'Curriculum Name',
+            title: 'Tên khung CTĐT',
             dataIndex: 'name',
             key: 'name',
             sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
@@ -66,7 +66,7 @@ const CurriculumManagement = ({ onNavigate }) => {
             render: (text) => <Text strong>{text}</Text>
         },
         {
-            title: 'Major',
+            title: 'Ngành',
             dataIndex: ['major', 'name'],
             key: 'major',
             sorter: (a, b) => (a.major?.name || '').localeCompare(b.major?.name || ''),
@@ -74,7 +74,7 @@ const CurriculumManagement = ({ onNavigate }) => {
             render: (text) => <Tag color="geekblue">{text}</Tag>
         },
         {
-            title: 'Cohort',
+            title: 'Khóa',
             dataIndex: ['cohort', 'name'],
             key: 'cohort',
             align: 'center',
@@ -84,12 +84,12 @@ const CurriculumManagement = ({ onNavigate }) => {
             render: (text) => <Tag color="orange">{text}</Tag>
         },
         {
-            title: 'Action',
+            title: 'Thao tác',
             key: 'action',
             align: 'center',
             width: 150,
             render: (_, record) => (
-                <Tooltip title="View Roadmap Details">
+                <Tooltip title="Xem chi tiết lộ trình">
                     <Button 
                         type="primary" 
                         ghost 
@@ -97,7 +97,7 @@ const CurriculumManagement = ({ onNavigate }) => {
                         size="small"
                         onClick={() => onNavigate(record)} // Gọi hàm điều hướng
                     >
-                        Roadmap
+                        Lộ trình
                     </Button>
                 </Tooltip>
             )
@@ -108,15 +108,15 @@ const CurriculumManagement = ({ onNavigate }) => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Curriculum Management</Title>
-                    <Text type="secondary">Study Programs Framework (Khung chương trình)</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý khung CTĐT</Title>
+                    <Text type="secondary">Khung chương trình đào tạo</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Excel</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập Excel</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchCurricula} />
                 </Space>

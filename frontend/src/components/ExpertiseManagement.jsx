@@ -26,7 +26,7 @@ const ExpertiseManagement = () => {
             const res = await axiosClient.get('/lecturers');
             setLecturers(res.data);
         } catch {
-            message.error("Failed to fetch expertise data");
+            message.error("Không thể tải dữ liệu chuyên môn");
         } finally {
             setLoading(false);
         }
@@ -66,11 +66,11 @@ const ExpertiseManagement = () => {
                 .map(c => c.courseCode);
 
             await axiosClient.put(`/lecturers/${currentLecturer.id}/expertise`, codes);
-            message.success("Expertise updated for " + currentLecturer.fullName);
+            message.success("Đã cập nhật chuyên môn cho " + currentLecturer.fullName);
             setIsModalOpen(false);
             fetchExpertise(); 
         } catch {
-            message.error("Update failed");
+            message.error("Cập nhật thất bại");
         }
     };
 
@@ -82,10 +82,10 @@ const ExpertiseManagement = () => {
         showUploadList: false,
         onChange(info) {
             if (info.file.status === 'done') {
-                message.success(`${info.file.name} imported successfully`);
+                message.success(`Đã nhập ${info.file.name} thành công`);
                 fetchExpertise();
             } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} import failed`);
+                message.error(`Nhập ${info.file.name} thất bại`);
             }
         },
     };
@@ -101,14 +101,14 @@ const ExpertiseManagement = () => {
             link.click();
             link.remove();
         } catch {
-            message.error("Failed to download template");
+            message.error("Không thể tải file mẫu");
         }
     };
     // ... (Hết phần cũ) ...
 
     const columns = [
         {
-            title: 'Lecturer',
+            title: 'Giảng viên',
             key: 'lecturer',
             width: 250,
             sorter: (a, b) => (a.fullName || '').localeCompare(b.fullName || ''),
@@ -124,7 +124,7 @@ const ExpertiseManagement = () => {
             )
         },
         {
-            title: 'Faculty',
+            title: 'Khoa/Viện',
             dataIndex: ['faculty', 'name'],
             key: 'faculty',
             width: 150,
@@ -133,7 +133,7 @@ const ExpertiseManagement = () => {
             render: (text) => <Tag color="purple">{text}</Tag>
         },
         {
-            title: 'Teaching Capabilities',
+            title: 'Năng lực giảng dạy',
             dataIndex: 'teachingCourses',
             key: 'courses',
             sorter: (a, b) => ( (a.teachingCourses?.length || 0) - (b.teachingCourses?.length || 0) ),
@@ -149,12 +149,12 @@ const ExpertiseManagement = () => {
             )
         },
         {
-            title: 'Action',
+            title: 'Thao tác',
             key: 'action',
             width: 80,
             align: 'center',
             render: (_, record) => (
-                <Tooltip title="Edit Expertise">
+                <Tooltip title="Sửa chuyên môn">
                     <Button 
                         type="text" 
                         icon={<EditOutlined />} 
@@ -169,15 +169,15 @@ const ExpertiseManagement = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="large">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Expertise Management</Title>
-                    <Text type="secondary">Assign courses to lecturers (Phân công chuyên môn)</Text>
+                    <Title level={3} style={{ margin: 0 }}>Quản lý chuyên môn</Title>
+                    <Text type="secondary">Phân công học phần cho giảng viên</Text>
                 </div>
                 <Space>
                     <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                        Template
+                        Mẫu
                     </Button>
                     <Upload {...uploadProps}>
-                        <Button type="primary" icon={<UploadOutlined />}>Import Mapping</Button>
+                        <Button type="primary" icon={<UploadOutlined />}>Nhập phân công</Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={fetchExpertise} />
                 </Space>
@@ -195,7 +195,7 @@ const ExpertiseManagement = () => {
 
             {/* Modal Edit Expertise */}
             <Modal
-                title={`Edit Expertise: ${currentLecturer?.fullName || ''}`}
+                title={`Sửa chuyên môn: ${currentLecturer?.fullName || ''}`}
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={handleSave}
@@ -204,16 +204,16 @@ const ExpertiseManagement = () => {
             >
                 <div style={{ padding: 16 }}>
                     <Input.Search 
-                        placeholder="Search by code or name..." 
+                        placeholder="Tìm theo mã hoặc tên..." 
                         onChange={e => setSearchText(e.target.value)} 
                         style={{ marginBottom: 16 }}
                     />
                     <Table
                         rowKey="id"
                         columns={[
-                            { title: 'Code', dataIndex: 'courseCode', width: 120 },
-                            { title: 'Name', dataIndex: 'name' },
-                            { title: 'Credits', dataIndex: 'credits', width: 80 },
+                            { title: 'Mã', dataIndex: 'courseCode', width: 120 },
+                            { title: 'Tên', dataIndex: 'name' },
+                            { title: 'TC', dataIndex: 'credits', width: 80 },
                         ]}
                         dataSource={allCourses.filter(c => 
                             c.courseCode.toLowerCase().includes(searchText.toLowerCase()) || 

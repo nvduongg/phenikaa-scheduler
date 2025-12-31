@@ -1,6 +1,6 @@
 /* src/index.css */
 :root {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 }
@@ -29,7 +29,7 @@ body {
   background: #a8a8a8;
 }
 
-/* Ensure Ant Design notifications and messages use the Poppins system font */
+/* Ensure Ant Design notifications and messages use the Inter/Montserrat system font */
 .ant-notification,
 .ant-notification-notice,
 .ant-notification-notice-message,
@@ -38,12 +38,12 @@ body {
 .ant-message-notice,
 .ant-notification .ant-typography,
 .ant-message .ant-typography {
-  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-family: 'Inter', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }
 
-/* Also ensure modal and popover content inherit Poppins */
+/* Also ensure modal and popover content inherit Inter/Montserrat */
 .ant-modal,
 .ant-popover,
 .ant-popover-inner {
-  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-family: 'Inter', 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
 }

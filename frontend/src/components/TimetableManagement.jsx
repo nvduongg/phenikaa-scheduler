@@ -40,7 +40,7 @@ const TimetableManagement = () => {
             const offeringData = offerRes.data;
             setOfferings(offeringData);
         } catch {
-            message.error("Failed to load schedule data");
+            message.error("Không thể tải dữ liệu thời khóa biểu");
         } finally {
             setLoading(false);
         }
@@ -71,7 +71,7 @@ const TimetableManagement = () => {
             message.success(res.data);
             fetchData();
         } catch {
-            message.error("Scheduling failed");
+            message.error("Xếp lịch thất bại");
         } finally {
             setGenerating(false);
         }
@@ -82,12 +82,12 @@ const TimetableManagement = () => {
         setUpdatingSemester(true);
         try {
             await axiosClient.post(`/semesters/${selectedSemesterId}/set-current`);
-            message.success('Active semester updated');
+            message.success('Đã cập nhật học kỳ hiện hành');
             setSemesterModalOpen(false);
             fetchSemesters();
             fetchData();
         } catch {
-            message.error('Failed to update active semester');
+            message.error('Không thể cập nhật học kỳ hiện hành');
         } finally {
             setUpdatingSemester(false);
         }
@@ -120,7 +120,7 @@ const TimetableManagement = () => {
             window.URL.revokeObjectURL(blobUrl);
         } catch (e) {
             console.error(e);
-            message.error('Export failed');
+            message.error('Xuất file thất bại');
         } finally {
             setExporting(false);
         }
@@ -141,7 +141,7 @@ const TimetableManagement = () => {
     // 4. Table Columns Definition
     const columns = [
         {
-            title: 'Course Offerings',
+            title: 'Lớp học phần',
             align: 'left',
             dataIndex: 'code',
             key: 'code',
@@ -154,14 +154,14 @@ const TimetableManagement = () => {
                     {record.parent && (
                         <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
                             <span style={{ marginRight: 4 }}>↳</span>
-                            Parent: {record.parent.code}
+                            Lớp cha: {record.parent.code}
                         </div>
                     )}
                 </div>
             )
         },
         {
-            title: 'Type',
+            title: 'Loại',
             dataIndex: 'classType',
             key: 'classType',
             width: 80,
@@ -176,7 +176,7 @@ const TimetableManagement = () => {
             }
         },
         {
-            title: 'Course',
+            title: 'Học phần',
             key: 'course',
             width: 260,
             sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
@@ -191,7 +191,7 @@ const TimetableManagement = () => {
             )
         },
         {
-            title: 'Student Classes',
+            title: 'Lớp sinh viên',
             dataIndex: 'targetClasses',
             key: 'targetClasses',
             width: 200,
@@ -206,7 +206,7 @@ const TimetableManagement = () => {
             )
         },
         {
-            title: 'Semester',
+            title: 'Học kỳ',
             dataIndex: ['semester', 'name'],
             key: 'semester',
             width: 100,
@@ -215,7 +215,7 @@ const TimetableManagement = () => {
             render: (text) => text ? <Tag>{text}</Tag> : '-'
         },
         {
-            title: 'Schedule Time',
+            title: 'Thời gian học',
             key: 'time',
             width: 200,
             sorter: (a, b) => {
@@ -226,9 +226,9 @@ const TimetableManagement = () => {
             },
             sortDirections: ['ascend', 'descend'],
             render: (_, record) => {
-                if (!record.dayOfWeek) return <Tag>Unscheduled</Tag>;
+                if (!record.dayOfWeek) return <Tag>Chưa xếp</Tag>;
                 
-                const days = {2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 7: 'Sat', 8: 'Sun'};
+                const days = {2: 'T2', 3: 'T3', 4: 'T4', 5: 'T5', 6: 'T6', 7: 'T7', 8: 'CN'};
                 const dayName = days[record.dayOfWeek];
                 let color = 'blue';
                 if (record.dayOfWeek === 8) color = 'orange'; // CN
@@ -236,14 +236,14 @@ const TimetableManagement = () => {
                 return (
                     <Space direction="vertical" size={0}>
                         <Tag color={color} icon={<ClockCircleOutlined />}>
-                            {dayName}, Per {record.startPeriod} - {record.endPeriod}
+                            {dayName}, Tiết {record.startPeriod} - {record.endPeriod}
                         </Tag>
                     </Space>
                 );
             }
         },
         {
-            title: 'Location (Room)',
+            title: 'Địa điểm (Phòng)',
             dataIndex: ['room', 'name'],
             key: 'room',
             width: 130,
@@ -256,17 +256,17 @@ const TimetableManagement = () => {
             ) : <Text type="secondary">-</Text>
         },
         {
-            title: 'Lecturer',
+            title: 'Giảng viên',
             dataIndex: ['lecturer', 'fullName'],
             key: 'lecturer',
             sorter: (a, b) => (a.lecturer?.fullName || '').localeCompare(b.lecturer?.fullName || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text) => text ? (
                 <Text>{text}</Text>
-            ) : <Text type="secondary" italic>Auto-assign</Text>
+            ) : <Text type="secondary" italic>Tự phân công</Text>
         },
         {
-            title: 'Status',
+            title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
             align: 'center',
@@ -292,14 +292,14 @@ const TimetableManagement = () => {
             {/* --- Header, Search & Actions --- */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                 <div>
-                    <Title level={3} style={{ margin: 0 }}>Master Timetable</Title>
-                    <Text type="secondary">Manage and Monitor all scheduled classes</Text>
+                    <Title level={3} style={{ margin: 0 }}>Thời khóa biểu</Title>
+                    <Text type="secondary">Quản lý và theo dõi các lớp đã xếp lịch</Text>
                 </div>
                 <Space size="middle">
                     <Input 
                         style={{ width: 280 }}
                         prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} 
-                        placeholder="Search by class, course or student class" 
+                        placeholder="Tìm theo lớp học phần, học phần hoặc lớp sinh viên" 
                         allowClear
                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     />
@@ -309,7 +309,7 @@ const TimetableManagement = () => {
                     >
                         {activeSemester 
                             ? `${activeSemester.name} (${activeSemester.academicYear})` 
-                            : 'Select Semester'}
+                            : 'Chọn học kỳ'}
                     </Button>
                     <Button 
                         type="primary" 
@@ -318,9 +318,9 @@ const TimetableManagement = () => {
                         onClick={handleGenerate}
                         style={{ fontWeight: 500 }}
                     >
-                        Run Auto-Schedule
+                        Chạy xếp lịch tự động
                     </Button>
-                    <Button icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>Export</Button>
+                    <Button icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>Xuất</Button>
                 </Space>
             </div>
 
@@ -335,7 +335,7 @@ const TimetableManagement = () => {
                 />
             </Card>
             <Modal
-                title="Select Active Semester"
+                title="Chọn học kỳ hiện hành"
                 open={semesterModalOpen}
                 onOk={handleSetCurrentSemester}
                 onCancel={() => setSemesterModalOpen(false)}
@@ -343,13 +343,13 @@ const TimetableManagement = () => {
             >
                 <Select
                     style={{ width: '100%' }}
-                    placeholder="Choose semester"
+                    placeholder="Chọn học kỳ"
                     value={selectedSemesterId}
                     onChange={setSelectedSemesterId}
                 >
                     {semesters.map(s => (
                         <Option key={s.id} value={s.id}>
-                            {s.name} ({s.academicYear}) {s.isCurrent ? '- ACTIVE' : ''}
+                            {s.name} ({s.academicYear}) {s.isCurrent ? '- ĐANG ÁP DỤNG' : ''}
                         </Option>
                     ))}
                 </Select>

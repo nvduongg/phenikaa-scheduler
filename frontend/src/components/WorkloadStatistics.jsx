@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Typography, Row, Col, Statistic, Tag } from 'antd';
+import { Card, Table, Typography, Tag, Space } from 'antd';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axiosClient from '../api/axiosClient';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const WorkloadStatistics = () => {
     const [data, setData] = useState([]);
@@ -28,10 +28,10 @@ const WorkloadStatistics = () => {
 
     // Cấu hình cột cho bảng
     const columns = [
-        { title: 'Lecturer Name', dataIndex: 'lecturerName', key: 'name', fixed: 'left', sorter: (a, b) => (a.lecturerName || '').localeCompare(b.lecturerName || ''), sortDirections: ['ascend','descend'] },
+        { title: 'Tên giảng viên', dataIndex: 'lecturerName', key: 'name', fixed: 'left', sorter: (a, b) => (a.lecturerName || '').localeCompare(b.lecturerName || ''), sortDirections: ['ascend','descend'] },
         { title: 'Email', dataIndex: 'email', key: 'email', responsive: ['md'], sorter: (a, b) => (a.email || '').localeCompare(b.email || ''), sortDirections: ['ascend','descend'] },
         { 
-            title: 'Classes', 
+            title: 'Số lớp', 
             dataIndex: 'totalClasses', 
             key: 'classes', 
             align: 'center',
@@ -39,7 +39,7 @@ const WorkloadStatistics = () => {
             render: (val) => <Tag color="blue">{val}</Tag>
         },
         { 
-            title: 'Theory Hours', 
+            title: 'Tiết LT', 
             dataIndex: 'totalTheoryPeriods', 
             key: 'theory', 
             align: 'center',
@@ -47,7 +47,7 @@ const WorkloadStatistics = () => {
             render: (val) => <span style={{color: '#faad14'}}>{val}</span>
         },
         { 
-            title: 'Practice Hours', 
+            title: 'Tiết TH', 
             dataIndex: 'totalPracticePeriods', 
             key: 'practice', 
             align: 'center',
@@ -55,7 +55,7 @@ const WorkloadStatistics = () => {
             render: (val) => <span style={{color: '#52c41a'}}>{val}</span> 
         },
         { 
-            title: 'Total Load', 
+            title: 'Tổng tải', 
             dataIndex: 'totalPeriod', 
             key: 'total', 
             align: 'center',
@@ -65,12 +65,15 @@ const WorkloadStatistics = () => {
     ];
 
     return (
-        <div style={{ padding: 0 }}>
-            <Title level={3}>Lecturer Workload Statistics</Title>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <div>
+                <Title level={3} style={{ margin: 0 }}>Thống kê tải giảng dạy giảng viên</Title>
+                <Text type="secondary">Tổng hợp theo học kỳ hiện hành</Text>
+            </div>
             
             {/* PHẦN 1: BIỂU ĐỒ (Chỉ lấy Top 15 người cao nhất để đỡ rối) */}
             <Card style={{ marginBottom: 24 }}>
-                <Title level={5}>Top Workload (Periods/Semester)</Title>
+                <Title level={5}>Top tải giảng dạy (Tiết/học kỳ)</Title>
                 <div style={{ width: '100%', height: 350 }}>
                     <ResponsiveContainer>
                         <BarChart
@@ -79,11 +82,11 @@ const WorkloadStatistics = () => {
                         >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="lecturerName" angle={-45} textAnchor="end" height={80} interval={0} fontSize={12}/>
-                            <YAxis label={{ value: 'Periods', angle: -90, position: 'insideLeft' }} />
+                            <YAxis label={{ value: 'Tiết', angle: -90, position: 'insideLeft' }} />
                             <Tooltip />
                             <Legend verticalAlign="top"/>
-                            <Bar dataKey="totalTheoryPeriods" name="Theory" stackId="a" fill="#faad14" />
-                            <Bar dataKey="totalPracticePeriods" name="Practice" stackId="a" fill="#52c41a" />
+                            <Bar dataKey="totalTheoryPeriods" name="Lý thuyết" stackId="a" fill="#faad14" />
+                            <Bar dataKey="totalPracticePeriods" name="Thực hành" stackId="a" fill="#52c41a" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -91,7 +94,7 @@ const WorkloadStatistics = () => {
 
             {/* PHẦN 2: BẢNG CHI TIẾT */}
             <Card>
-                <Title level={5}>Detailed Data</Title>
+                <Title level={5}>Dữ liệu chi tiết</Title>
                 <Table 
                     columns={columns} 
                     dataSource={data} 
@@ -100,7 +103,7 @@ const WorkloadStatistics = () => {
                     pagination={{ pageSize: 10 }}
                 />
             </Card>
-        </div>
+        </Space>
     );
 };
 
