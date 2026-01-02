@@ -167,6 +167,7 @@ public class CourseOfferingService {
         return offeringRepo.save(offering);
     }
 
+    @SuppressWarnings("unused")
     @Transactional
     public String importCourseOfferingsExcel(MultipartFile file) {
         List<String> errors = new ArrayList<>();
