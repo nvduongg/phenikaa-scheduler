@@ -55,8 +55,11 @@ export const MENU_CONFIG = [
     key: 'grp_sys',
     label: 'Cài đặt hệ thống',
     icon: <SettingOutlined />,
-    roles: ['ADMIN'],
-    children: [{ key: '99', label: 'Thiết lập học kỳ', path: '/v1/semester-settings' }],
+    roles: ['ADMIN', 'ADMIN_SCHOOL'],
+    children: [
+      { key: '98', label: 'Quản lý người dùng', path: '/v1/users', roles: ['ADMIN', 'ADMIN_SCHOOL'] },
+      { key: '99', label: 'Thiết lập học kỳ', path: '/v1/semester-settings', roles: ['ADMIN'] },
+    ],
   },
   {
     key: 'grp_stat',

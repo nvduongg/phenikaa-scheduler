@@ -29,7 +29,7 @@ const toAntdMenuItems = (items) => {
 
 const AppLayout = ({
   user,
-  contentWidth = '1400px',
+  contentWidth = '2000px',
   menuItems,
   selectedKey,
   onMenuClick,

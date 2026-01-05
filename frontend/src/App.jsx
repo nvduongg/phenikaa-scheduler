@@ -17,6 +17,7 @@ import TimetableManagement from './components/TimetableManagement';
 import SemesterManagement from './components/SemesterManagement';
 import LoginPage from './pages/LoginPage';
 import WorkloadStatistics from './components/WorkloadStatistics';
+import UserManagement from './components/UserManagement';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import AppLayout from './layouts/AppLayout';
@@ -54,7 +55,7 @@ const App = () => {
         return filterMenuByRole(MENU_CONFIG, user.role);
     }, [user]); // Chỉ tính lại khi user thay đổi
 
-    const CONTENT_WIDTH = '1400px';
+    const CONTENT_WIDTH = '1500px';
 
     // --- LOGIC LOGIN / LOGOUT ---
 
@@ -143,6 +144,13 @@ const App = () => {
                 <Route
                     path="/v1/timetable"
                     element={user && user.role === 'ADMIN' ? <TimetableManagement /> : <div style={{ padding: 24 }}>Không có quyền truy cập</div>}
+                />
+
+                <Route
+                    path="/v1/users"
+                    element={user && (user.role === 'ADMIN' || user.role === 'ADMIN_SCHOOL')
+                        ? <UserManagement user={user} />
+                        : <div style={{ padding: 24 }}>Không có quyền truy cập</div>}
                 />
 
                 <Route path="/v1/reports/lecturer-workload" element={<WorkloadStatistics />} />

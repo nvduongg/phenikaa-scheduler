@@ -259,6 +259,7 @@ const TimetableManagement = () => {
             title: 'Giảng viên',
             dataIndex: ['lecturer', 'fullName'],
             key: 'lecturer',
+            width: 200,
             sorter: (a, b) => (a.lecturer?.fullName || '').localeCompare(b.lecturer?.fullName || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text) => text ? (

@@ -333,11 +333,11 @@ public class CourseOfferingService {
     public List<CourseOffering> getOfferingsForUser(User user) {
         List<CourseOffering> all = offeringRepo.findAll();
 
-        if (user.getRole().equals("ADMIN_TRUONG")) {
+        if (user.getRole().equals("ADMIN")) {
             return all; // Thấy hết
         }
 
-        if (user.getRole().equals("ADMIN_KHOA")) {
+        if (user.getRole().equals("ADMIN_FACULTY")) {
             Long myFacultyId = user.getFaculty().getId();
 
             return all.stream().filter(offering -> {

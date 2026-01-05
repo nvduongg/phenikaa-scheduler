@@ -293,7 +293,7 @@ const OfferingManagement = ({ user }) => {
                 
                 // Có được quyền gán GV không?
                 // Chỉ được gán khi môn học thuộc khoa của mình
-                const canAssign = (user?.role === 'ADMIN_TRUONG') || 
+                const canAssign = (user?.role === 'ADMIN') || 
                                   (myFacultyId === managingFacultyId);
 
                 return (

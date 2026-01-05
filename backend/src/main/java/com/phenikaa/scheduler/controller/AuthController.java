@@ -62,8 +62,8 @@ public class AuthController {
         User admin = new User();
         admin.setUsername("admin");
         admin.setPassword(encoder.encode("123456"));
-        admin.setRole("ADMIN_TRUONG");
-        admin.setFullName("Super Admin");
+        admin.setRole("ADMIN");
+        admin.setFullName("Phenikaa Admin");
         userRepository.save(admin);
         
         return "Setup done. Login with admin/123456";

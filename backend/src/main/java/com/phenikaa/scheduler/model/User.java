@@ -17,7 +17,7 @@ public class User {
     @Column(nullable = false)
     private String password; // Lưu hash (BCrypt)
 
-    // Role: "ADMIN_TRUONG" (Super Admin), "ADMIN_KHOA" (Faculty Admin), "GIANG_VIEN"
+    // Role: "ADMIN" (Đại học), "ADMIN_SCHOOL" (Trường), "ADMIN_FACULTY" (Khoa)
     @Column(nullable = false)
     private String role;
 
@@ -26,8 +26,8 @@ public class User {
     private School school;   // Dùng cho ADMIN_SCHOOL (Mới thêm)
 
     // QUAN TRỌNG: User này thuộc khoa nào?
-    // Nếu là ADMIN_TRUONG -> null (quản lý tất)
-    // Nếu là ADMIN_KHOA -> trỏ về khoa cụ thể (VD: Khoa CNTT)
+    // Nếu là ADMIN -> null (quản lý tất)
+    // Nếu là ADMIN_FACULTY -> trỏ về khoa cụ thể (VD: Khoa CNTT)
     @ManyToOne
     @JoinColumn(name = "faculty_id")
     private Faculty faculty; 
