@@ -54,6 +54,7 @@ public class UserManagementController {
 
         boolean isAdmin = hasAuthority(principal, "ADMIN");
         boolean isAdminSchool = hasAuthority(principal, "ADMIN_SCHOOL");
+        @SuppressWarnings("unused")
         boolean isAdminFaculty = hasAuthority(principal, "ADMIN_FACULTY");
 
         // ADMIN_FACULTY không có quyền truy cập quản lý người dùng
@@ -428,6 +429,7 @@ public class UserManagementController {
 
         static Scope admin() { return new Scope("ADMIN", null, null); }
         static Scope adminSchool(Long schoolId) { return new Scope("ADMIN_SCHOOL", schoolId, null); }
+        @SuppressWarnings("unused")
         static Scope adminFaculty(Long facultyId) { return new Scope("ADMIN_FACULTY", null, facultyId); }
         static Scope none() { return new Scope("NONE", null, null); }
 

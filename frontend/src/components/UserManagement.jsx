@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Card,
   Table,
   Tag,
   Typography,
@@ -13,6 +12,7 @@ import {
   Select,
   Upload,
   Popconfirm,
+  Card,
 } from 'antd';
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons';
 import axiosClient from '../api/axiosClient';
@@ -252,45 +252,48 @@ const UserManagement = ({ user }) => {
   ];
 
   return (
-    <Card
-      bordered={false}
-      title={<Title level={4} style={{ margin: 0 }}>Quản lý người dùng</Title>}
-      extra={
+    <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <Title level={3} style={{ margin: 0 }}>Quản lý người dùng</Title>
+          <Text type="secondary">Quản lý tài khoản và phân quyền hệ thống</Text>
+        </div>
         <Space>
           <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-            File mẫu
+            Mẫu
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            Thêm mới
           </Button>
           <Upload {...uploadProps}>
-            <Button icon={<UploadOutlined />}>
-              Import
+            <Button type="primary" icon={<UploadOutlined />}>
+              Nhập Excel
             </Button>
           </Upload>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Thêm
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchUsers} loading={loading}>
-            Tải lại
-          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchUsers} loading={loading} />
         </Space>
-      }
-    >
-      <Table
-        rowKey="id"
-        loading={loading}
-        dataSource={users}
-        columns={columns}
-        pagination={{ pageSize: 10 }}
-      />
+      </div>
+
+      <Card bodyStyle={{ padding: 0 }}>
+        <Table
+          rowKey="id"
+          loading={loading}
+          dataSource={users}
+          columns={columns}
+          pagination={{ pageSize: 8 }}
+        />
+      </Card>
 
       <Modal
-        title={editing ? 'Cập nhật người dùng' : 'Thêm người dùng'}
+        title={editing ? 'Sửa người dùng' : 'Tạo người dùng'}
         open={modalVisible}
         onCancel={() => { setModalVisible(false); setEditing(null); }}
-        onOk={handleSubmit}
+        onOk={() => form.submit()}
         okText={editing ? 'Lưu' : 'Tạo'}
         confirmLoading={saving}
+        destroyOnClose
       >
-        <Form layout="vertical" form={form}>
+        <Form layout="vertical" form={form} onFinish={handleSubmit}>
           <Form.Item
             label="Tài khoản"
             name="username"
@@ -363,7 +366,7 @@ const UserManagement = ({ user }) => {
           </Form.Item>
         </Form>
       </Modal>
-    </Card>
+    </Space>
   );
 };
 
