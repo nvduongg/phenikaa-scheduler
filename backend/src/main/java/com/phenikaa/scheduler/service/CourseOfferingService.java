@@ -11,6 +11,7 @@ import com.phenikaa.scheduler.repository.LecturerRepository;
 import com.phenikaa.scheduler.repository.SemesterRepository;
 import com.phenikaa.scheduler.security.SecurityUtils;
 import com.phenikaa.scheduler.security.services.UserDetailsImpl;
+import com.phenikaa.scheduler.validator.CourseOfferingValidator;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -38,6 +39,8 @@ public class CourseOfferingService {
     private SemesterRepository semesterRepo;
     @Autowired 
     private SecurityUtils securityUtils;
+    @Autowired
+    private CourseOfferingValidator offeringValidator;
 
     public List<CourseOffering> getAllOfferings() {
         UserDetailsImpl user = securityUtils.getCurrentUser();
@@ -68,6 +71,16 @@ public class CourseOfferingService {
     public CourseOffering createOffering(CourseOffering offering) {
         if (offering.getCourse() == null) {
             throw new RuntimeException("Course is required for CourseOffering");
+        }
+
+        // Validate and auto-detect classType from classCode
+        if (offering.getCode() != null && !offering.getCode().isEmpty()) {
+            if (!offeringValidator.isValidFormat(offering.getCode())) {
+                throw new IllegalArgumentException(
+                    "Invalid classCode format. Expected: CSE703002-3-1-25(N01.TH1) or CSE703002-3-1-25(N01)");
+            }
+            // Auto-detect classType and requiredRoomType from code
+            offeringValidator.applyAutoDetection(offering);
         }
 
         // Resolve Course by id or courseCode
@@ -107,7 +120,17 @@ public class CourseOfferingService {
     @SuppressWarnings("null")
     public java.util.Optional<CourseOffering> updateOffering(Long id, CourseOffering updated) {
         return offeringRepo.findById(id).map(existing -> {
-            existing.setCode(updated.getCode());
+            // Validate and auto-detect when code changes
+            if (updated.getCode() != null && !updated.getCode().isEmpty()) {
+                if (!offeringValidator.isValidFormat(updated.getCode())) {
+                    throw new IllegalArgumentException(
+                        "Invalid classCode format. Expected: CSE703002-3-1-25(N01.TH1) or CSE703002-3-1-25(N01)");
+                }
+                existing.setCode(updated.getCode());
+                // Auto-detect classType from new code
+                offeringValidator.applyAutoDetection(existing);
+            }
+            
             existing.setPlannedSize(updated.getPlannedSize());
             existing.setTargetClasses(updated.getTargetClasses());
 
@@ -256,13 +279,13 @@ public class CourseOfferingService {
                 classType = "ALL";
 
                 // Mặc định: nếu học phần thuộc Trường Máy tính (PSC) và không ghi LT/TH,
-                // thì coi như học phòng PC (LAB)
+                // thì coi như học phòng PC
                 if (isComputingSchool(course)) {
-                    requiredRoomType = "LAB";
+                    requiredRoomType = "PC";
                 }
             } else if ("PC".equals(normalizedType) || "LAB".equals(normalizedType)) {
                 classType = "ALL";
-                requiredRoomType = "LAB";
+                requiredRoomType = normalizedType;
             } else {
                 classType = normalizedType;
             }
@@ -275,10 +298,20 @@ public class CourseOfferingService {
             offering.setStatus("PLANNED");
             offering.setSemester(semester); // Gán kỳ học hiện tại
 
+            // Validate classCode format and auto-detect classType if valid
+            if (!offeringValidator.isValidFormat(classCode)) {
+                errors.add("Row " + (rowIndex + 1) + ": Invalid classCode format '" + classCode 
+                    + "'. Expected: CSE703002-3-1-25(N01.TH1) or CSE703002-3-1-25(N01)");
+                // Continue with warning but don't fail import
+            } else {
+                // Auto-detect and override classType from code
+                offeringValidator.applyAutoDetection(offering);
+            }
+
             // requiredRoomType: nếu file có chỉ định (hoặc default PSC), set theo đó; còn lại clear để dùng rule mặc định
             if (requiredRoomType != null && !requiredRoomType.isEmpty()) {
                 offering.setRequiredRoomType(requiredRoomType);
-            } else {
+            } else if (offering.getRequiredRoomType() == null || offering.getRequiredRoomType().isEmpty()) {
                 offering.setRequiredRoomType(null);
             }
 

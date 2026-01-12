@@ -67,8 +67,17 @@ const TimetableManagement = () => {
     const handleGenerate = async () => {
         setGenerating(true);
         try {
-            const res = await axiosClient.post('/offerings/generate-schedule');
-            message.success(res.data);
+            const semesterId = selectedSemesterId;
+            const res = await axiosClient.post(
+                '/offerings/generate-schedule',
+                {},
+                { params: semesterId ? { semesterId } : undefined }
+            );
+
+            const text = typeof res.data === 'string' ? res.data : 'Đã chạy xếp lịch';
+            if (text.toLowerCase().includes('không có lớp')) message.warning(text);
+            else if (text.toLowerCase().includes('error') || text.toLowerCase().includes('lỗi')) message.error(text);
+            else message.success(text);
             fetchData();
         } catch {
             message.error("Xếp lịch thất bại");
@@ -128,6 +137,7 @@ const TimetableManagement = () => {
 
     // 3. Filter Logic (only search)
     const filteredData = offerings.filter(item => {
+        if (selectedSemesterId && item.semester?.id && item.semester.id !== selectedSemesterId) return false;
         if (!filters.search) return true;
         const keyword = filters.search.toLowerCase();
         const codeMatch = (item.code || '').toLowerCase().includes(keyword);
@@ -145,16 +155,23 @@ const TimetableManagement = () => {
             align: 'left',
             dataIndex: 'code',
             key: 'code',
-            width: 380,
+            width: 'auto',
             sorter: (a, b) => (a.code || '').localeCompare(b.code || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text, record) => (
                 <div>
-                    <Text strong style={{ color: '#1890ff' }}>{text}</Text>
+                    <Text strong style={{ color: '#1890ff' }} ellipsis={{ tooltip: text }}>
+                        {text}
+                    </Text>
                     {record.parent && (
                         <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
                             <span style={{ marginRight: 4 }}>↳</span>
-                            Lớp cha: {record.parent.code}
+                            <span>
+                                Lớp cha:{' '}
+                                <Text type="secondary" ellipsis={{ tooltip: record.parent.code }}>
+                                    {record.parent.code}
+                                </Text>
+                            </span>
                         </div>
                     )}
                 </div>
@@ -164,7 +181,7 @@ const TimetableManagement = () => {
             title: 'Loại',
             dataIndex: 'classType',
             key: 'classType',
-            width: 80,
+            width: 120,
             align: 'center',
             sorter: (a, b) => (a.classType || '').localeCompare(b.classType || ''),
             sortDirections: ['ascend', 'descend'],
@@ -172,18 +189,21 @@ const TimetableManagement = () => {
                 if (type === 'LT') return <Tag color="blue">LT</Tag>;
                 if (type === 'TH') return <Tag color="cyan">TH</Tag>;
                 if (type === 'ELN') return <Tag color="purple">ELN</Tag>;
+                if (type === 'COURSERA') return <Tag color="volcano">COURSERA</Tag>;
                 return <Tag>{type}</Tag>;
             }
         },
         {
             title: 'Học phần',
             key: 'course',
-            width: 260,
+            width: 'auto',
             sorter: (a, b) => ((a.course?.name || '')).localeCompare(b.course?.name || ''),
             sortDirections: ['ascend', 'descend'],
             render: (_, record) => (
                 <div>
-                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{record.course?.name}</div>
+                    <Text style={{ fontSize: '13px', fontWeight: 500 }} ellipsis={{ tooltip: record.course?.name }}>
+                        {record.course?.name}
+                    </Text>
                     <Text type="secondary" style={{ fontSize: '12px' }}>
                         {record.course?.courseCode}
                     </Text>
@@ -194,22 +214,20 @@ const TimetableManagement = () => {
             title: 'Lớp sinh viên',
             dataIndex: 'targetClasses',
             key: 'targetClasses',
-            width: 200,
+            width: 'auto',
             sorter: (a, b) => (a.targetClasses || '').localeCompare(b.targetClasses || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text) => (
-                <Tooltip title={text}>
-                    <Text type="secondary" style={{ fontSize: '12px' }} ellipsis>
-                        {text}
-                    </Text>
-                </Tooltip>
+                <Text type="secondary" style={{ fontSize: '12px' }} ellipsis={{ tooltip: text }}>
+                    {text}
+                </Text>
             )
         },
         {
             title: 'Học kỳ',
             dataIndex: ['semester', 'name'],
             key: 'semester',
-            width: 100,
+            width: 'auto',
             sorter: (a, b) => (a.semester?.name || '').localeCompare(b.semester?.name || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text) => text ? <Tag>{text}</Tag> : '-'
@@ -217,7 +235,7 @@ const TimetableManagement = () => {
         {
             title: 'Thời gian học',
             key: 'time',
-            width: 200,
+            width: 'auto',
             sorter: (a, b) => {
                 const da = a.dayOfWeek || 0;
                 const db = b.dayOfWeek || 0;
@@ -243,15 +261,18 @@ const TimetableManagement = () => {
             }
         },
         {
-            title: 'Địa điểm (Phòng)',
+            title: 'Phòng',
             dataIndex: ['room', 'name'],
             key: 'room',
-            width: 130,
+            width: 'auto',
             sorter: (a, b) => (a.room?.name || '').localeCompare(b.room?.name || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text, record) => text ? (
                 <Tag color="geekblue" icon={<EnvironmentOutlined />}>
-                    {text} <span style={{ opacity: 0.6 }}>({record.room.type})</span>
+                    <Text style={{ color: 'inherit' }} ellipsis={{ tooltip: text }}>
+                        {text}
+                    </Text>
+                    <span style={{ opacity: 0.6 }}> ({record.room.type})</span>
                 </Tag>
             ) : <Text type="secondary">-</Text>
         },
@@ -259,11 +280,11 @@ const TimetableManagement = () => {
             title: 'Giảng viên',
             dataIndex: ['lecturer', 'fullName'],
             key: 'lecturer',
-            width: 200,
+            width: 'auto',
             sorter: (a, b) => (a.lecturer?.fullName || '').localeCompare(b.lecturer?.fullName || ''),
             sortDirections: ['ascend', 'descend'],
             render: (text) => text ? (
-                <Text>{text}</Text>
+                <Text ellipsis={{ tooltip: text }}>{text}</Text>
             ) : <Text type="secondary" italic>Tự phân công</Text>
         },
         {
@@ -271,7 +292,7 @@ const TimetableManagement = () => {
             dataIndex: 'status',
             key: 'status',
             align: 'center',
-            width: 100,
+            width: 'auto',
             sorter: (a, b) => (a.status || '').localeCompare(b.status || ''),
             sortDirections: ['ascend', 'descend'],
             render: (status, record) => {
@@ -332,6 +353,8 @@ const TimetableManagement = () => {
                     dataSource={filteredData} 
                     rowKey="id"
                     loading={loading}
+                    tableLayout="fixed"
+                    scroll={{ x: 1600 }}
                     pagination={{ pageSize: 10 }}
                 />
             </Card>

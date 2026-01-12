@@ -121,7 +121,8 @@ public class GeneticAlgorithm {
 
     private Gene randomGene(CourseOffering off, List<Room> rooms) {
         boolean isOnline = isOnlineCourse(off);
-        String requiredType = getRequiredRoomType(off);
+        Set<String> allowedTypes = getAllowedRoomTypes(off);
+        int plannedSize = off.getPlannedSize() != null ? off.getPlannedSize() : 0;
 
         // 1. Chọn ngày (Day)
         int day;
@@ -140,14 +141,14 @@ public class GeneticAlgorithm {
 
         // 3. Chọn Phòng (Room) - Lọc đúng loại ngay từ đầu
         List<Room> candidates = rooms.stream()
-                .filter(r -> r.getType().equalsIgnoreCase(requiredType))
-                .filter(r -> r.getCapacity() >= off.getPlannedSize()) // Đủ chỗ
+            .filter(r -> allowedTypes.contains(normalizeRoomType(r.getType())))
+            .filter(r -> r.getCapacity() != null && r.getCapacity() >= plannedSize) // Đủ chỗ
                 .collect(Collectors.toList());
 
         // Fallback: Nếu không có phòng vừa vặn, lấy tạm phòng đúng loại (chấp nhận thiếu chỗ để phạt sau)
         if (candidates.isEmpty()) {
             candidates = rooms.stream()
-                    .filter(r -> r.getType().equalsIgnoreCase(requiredType))
+                .filter(r -> allowedTypes.contains(normalizeRoomType(r.getType())))
                     .collect(Collectors.toList());
         }
         // Fallback cuối cùng: Random đại (hiếm khi xảy ra nếu data chuẩn)
@@ -174,10 +175,11 @@ public class GeneticAlgorithm {
             if (gene.day == 8) score -= 5000;
 
             int duration = getSessionDuration(off);
+            int plannedSize = off.getPlannedSize() != null ? off.getPlannedSize() : 0;
 
             // 1. Phạt Vi phạm Loại phòng & Sức chứa (Dù randomGene đã lọc, nhưng mutation có thể gây lỗi)
-            if (!gene.room.getType().equalsIgnoreCase(getRequiredRoomType(off))) score -= 1000;
-            if (gene.room.getCapacity() < off.getPlannedSize()) score -= 500;
+            if (!getAllowedRoomTypes(off).contains(normalizeRoomType(gene.room.getType()))) score -= 1000;
+            if (gene.room.getCapacity() != null && gene.room.getCapacity() < plannedSize) score -= 500;
 
             // 2. Phạt Vi phạm Kíp chuẩn (Double check)
             boolean isOnline = isOnlineCourse(off);
@@ -306,14 +308,24 @@ public class GeneticAlgorithm {
             || name.contains("COURSERA") || Boolean.TRUE.equals(off.getCourse().getIsOnline());
     }
 
-    private String getRequiredRoomType(CourseOffering off) {
-        if (isOnlineCourse(off)) return "ONLINE";
+    private Set<String> getAllowedRoomTypes(CourseOffering off) {
+        if (isOnlineCourse(off)) return Set.of("ONLINE");
+
         String required = off.getRequiredRoomType();
         if (required != null && !required.trim().isEmpty()) {
-            return required.trim().toUpperCase();
+            return Set.of(normalizeRoomType(required));
         }
-        if ("TH".equalsIgnoreCase(off.getClassType())) return "LAB";
-        return "THEORY";
+
+        // Default rules when not forced:
+        // - TH: allow LAB or PC
+        // - Others (LT/ALL): allow THEORY or HALL
+        if ("TH".equalsIgnoreCase(off.getClassType())) return Set.of("LAB", "PC");
+        return Set.of("THEORY", "HALL");
+    }
+
+    private static String normalizeRoomType(String type) {
+        if (type == null) return "";
+        return type.trim().toUpperCase();
     }
 
     private int getSessionDuration(CourseOffering off) {

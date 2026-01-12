@@ -29,4 +29,7 @@ public interface CourseOfferingRepository extends JpaRepository<CourseOffering, 
 
     // Lấy danh sách lớp theo Kỳ học
     List<CourseOffering> findBySemester_Id(Long semesterId);
+
+    // Dùng để migrate dữ liệu cũ (offerings chưa gán semester)
+    List<CourseOffering> findBySemesterIsNull();
 }

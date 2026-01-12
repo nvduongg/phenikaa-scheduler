@@ -4,6 +4,7 @@ import com.phenikaa.scheduler.controller.util.ExcelTemplateUtil;
 import com.phenikaa.scheduler.core.GeneticAlgorithm;
 import com.phenikaa.scheduler.model.CourseOffering;
 import com.phenikaa.scheduler.model.Semester;
+import com.phenikaa.scheduler.repository.CourseOfferingRepository;
 import com.phenikaa.scheduler.repository.SemesterRepository;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -21,15 +22,37 @@ import java.util.Objects;
 @Service
 public class SchedulerService {
     @Autowired private SemesterRepository semesterRepo;
+    @Autowired private CourseOfferingRepository offeringRepo;
     
     @Autowired private GeneticAlgorithm geneticAlgorithm;
 
     @Transactional
     public String generateSchedule(String algorithm) {
-        // Luôn dùng GA, bỏ Heuristic cũ
-        Semester currentSem = semesterRepo.findByIsCurrentTrue().orElse(null);
-        if (currentSem == null) return "Error: No active semester found! Please activate a semester first.";
-        return geneticAlgorithm.run(currentSem.getId());
+        return generateSchedule((Long) null);
+    }
+
+    @Transactional
+    public String generateSchedule(Long semesterId) {
+        Semester sem;
+        if (semesterId != null) {
+            sem = semesterRepo.findById(semesterId).orElse(null);
+            if (sem == null) return "Error: Semester not found (id=" + semesterId + ")";
+        } else {
+            sem = semesterRepo.findByIsCurrentTrue().orElse(null);
+            if (sem == null) return "Error: No active semester found! Please activate a semester first.";
+        }
+
+        // Migrate legacy data: nếu semester có offerings=0 nhưng DB đang có offerings chưa gán semester
+        // thì gán tạm vào semester đang chạy để GA có dữ liệu.
+        if (offeringRepo.findBySemester_Id(sem.getId()).isEmpty()) {
+            List<CourseOffering> missing = offeringRepo.findBySemesterIsNull();
+            if (missing != null && !missing.isEmpty()) {
+                missing.forEach(o -> o.setSemester(sem));
+                offeringRepo.saveAll(missing);
+            }
+        }
+
+        return geneticAlgorithm.run(sem.getId());
     }
 
     public Workbook buildTimetableWorkbook(String sheetName, List<CourseOffering> offerings) {

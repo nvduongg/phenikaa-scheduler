@@ -171,9 +171,9 @@ public class CourseOfferingController {
 
     // API Trigger Scheduling (Always uses Genetic Algorithm)
     @PostMapping("/generate-schedule")
-    public ResponseEntity<String> generateSchedule() {
+    public ResponseEntity<String> generateSchedule(@RequestParam(required = false) Long semesterId) {
         long startTime = System.currentTimeMillis();
-        String result = schedulerService.generateSchedule(null);
+        String result = schedulerService.generateSchedule(semesterId);
         long duration = System.currentTimeMillis() - startTime;
         return ResponseEntity.ok(result + " (Time: " + duration + "ms)");
     }

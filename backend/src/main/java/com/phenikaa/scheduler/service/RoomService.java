@@ -28,6 +28,19 @@ public class RoomService {
 
     @SuppressWarnings("null")
     public Room createRoom(Room room) {
+        // Auto-detect room type if not provided or if name suggests PC
+        if (room.getType() == null || room.getType().isEmpty()) {
+            room.setType(inferRoomType(room.getName()));
+        } else {
+            // Even if type is provided, override to PC if name contains PC or A6
+            String detectedType = inferRoomType(room.getName());
+            if ("PC".equals(detectedType) && room.getName() != null) {
+                String upperName = room.getName().toUpperCase();
+                if (upperName.contains("PC") || upperName.contains("A6")) {
+                    room.setType("PC");
+                }
+            }
+        }
         return roomRepo.save(room);
     }
 
@@ -36,7 +49,25 @@ public class RoomService {
         return roomRepo.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setCapacity(updated.getCapacity());
-            r.setType(updated.getType());
+            
+            // Auto-detect room type based on new name
+            String detectedType = inferRoomType(updated.getName());
+            if (updated.getType() == null || updated.getType().isEmpty()) {
+                r.setType(detectedType);
+            } else {
+                // Override to PC if name contains PC or A6
+                if ("PC".equals(detectedType) && updated.getName() != null) {
+                    String upperName = updated.getName().toUpperCase();
+                    if (upperName.contains("PC") || upperName.contains("A6")) {
+                        r.setType("PC");
+                    } else {
+                        r.setType(updated.getType());
+                    }
+                } else {
+                    r.setType(updated.getType());
+                }
+            }
+            
             return roomRepo.save(r);
         });
     }
@@ -126,9 +157,22 @@ public class RoomService {
                     Optional<Room> existingRoom = roomRepo.findByName(name);
                     if (existingRoom.isPresent()) {
                         Room room = existingRoom.get();
+                        boolean updated = false;
+                        
                         // Update capacity if new one is larger (adapt to max class size)
                         if (capacity > room.getCapacity()) {
                             room.setCapacity(capacity);
+                            updated = true;
+                        }
+                        
+                        // Auto-update type based on name (PC/A6 -> LAB)
+                        String detectedType = inferRoomType(name);
+                        if (!room.getType().equals(detectedType)) {
+                            room.setType(detectedType);
+                            updated = true;
+                        }
+                        
+                        if (updated) {
                             roomRepo.save(room);
                             updatedCount++;
                         }
@@ -154,10 +198,18 @@ public class RoomService {
     }
 
     // Helper: Infer Room Type based on Name keywords
+    // Automatically detects PC rooms as separate type from LAB
     private String inferRoomType(String name) {
         String n = name.toUpperCase();
         if (n.contains("ONLINE") || n.contains("TEAM") || n.contains("ZOOM") || n.contains("ELEARNING")) return "ONLINE";
-        if (n.contains("(TH)") || n.contains("(PC)") || n.contains("LAB") || n.contains("XƯỞNG") || n.contains("(TN)")) return "LAB";
+        
+        // PC rooms and A6 rooms are automatically detected as PC type (separate from LAB)
+        // This includes: "PC", "A6-xxx (PC)", "A6-501", etc.
+        if (n.contains("PC") || n.contains("A6")) return "PC";
+        
+        // LAB keywords (excluding PC)
+        if (n.contains("(TH)") || n.contains("LAB") || n.contains("XƯỞNG") || n.contains("(TN)")) return "LAB";
+        
         if (n.contains("SÂN") || n.contains("HỘI TRƯỜNG") || n.contains("NHÀ") || n.contains("HALL")) return "HALL";
         return "THEORY";
     }
