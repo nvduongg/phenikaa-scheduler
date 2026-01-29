@@ -78,13 +78,39 @@ const AppLayout = ({
             height: '100%',
           }}
         >
-          <Text style={{ color: 'white', fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              letterSpacing: '0.5px',
+              lineHeight: '40px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              height: '40px',
+            }}
+          >
             HỆ THỐNG XẾP THỜI KHÓA BIỂU
           </Text>
-          <Space size="middle">
+          <Space size="middle" align="center" style={{ height: '40px' }}>
             <Dropdown menu={userMenu} placement="bottomRight">
-              <a onClick={(e) => e.preventDefault()} style={{ cursor: 'pointer' }}>
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: '12px', fontWeight: 'bold' }}>
+              <a
+                onClick={(e) => e.preventDefault()}
+                style={{
+                  cursor: 'pointer',
+                  height: '40px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.85)',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    lineHeight: '40px',
+                  }}
+                >
                   Xin chào, {user?.fullName || user?.username} ({user?.role})
                 </Text>
               </a>
