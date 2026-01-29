@@ -94,8 +94,11 @@ const RoomManagement = () => {
             render: (type) => {
                 let color = 'default';
                 let icon = <ReadOutlined />;
-                if (type === 'LAB') {
+                if (type === 'PC') {
                     color = 'magenta';
+                    icon = <DesktopOutlined />;
+                } else if (type === 'LAB') {
+                    color = 'orange';
                     icon = <DesktopOutlined />;
                 } else if (type === 'HALL') {
                     color = 'gold';
@@ -181,7 +184,8 @@ const RoomManagement = () => {
                     <Form.Item name="type" label="Loại" rules={[{ required: true }]}>
                         <Select placeholder="Chọn loại phòng">
                             <Option value="THEORY">THEORY (Phòng học)</Option>
-                            <Option value="LAB">LAB (Phòng máy)</Option>
+                            <Option value="PC">PC (Phòng máy tính)</Option>
+                            <Option value="LAB">LAB (Phòng thí nghiệm/thực hành)</Option>
                             <Option value="HALL">HALL (Hội trường/Sân bãi)</Option>
                             <Option value="ONLINE">ONLINE (Trực tuyến)</Option>
                         </Select>

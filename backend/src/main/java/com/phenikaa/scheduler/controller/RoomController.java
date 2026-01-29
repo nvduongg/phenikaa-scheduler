@@ -62,7 +62,7 @@ public class RoomController {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Rooms");
 
-            String[] cols = {"Room Name", "Capacity", "Type (THEORY / LAB / HALL / ONLINE)"};
+            String[] cols = {"Room Name", "Capacity", "Type (THEORY / PC / LAB / HALL / ONLINE)"};
 
             CellStyle style = ExcelTemplateUtil.createBoldHeaderStyle(workbook);
             ExcelTemplateUtil.createHeaderRow(sheet, cols, style, 30);
@@ -70,7 +70,8 @@ public class RoomController {
             // Sample Data (English)
             Object[][] data = {
                 {"A2-301", 60, "THEORY"},
-                {"A6-501 (PC)", 45, "LAB"},
+                {"A6-501 (PC)", 45, "PC"},
+                {"Lab Hóa", 40, "LAB"},
                 {"Football Field", 100, "HALL"},
                 {"ONLINE-Teams", 500, "ONLINE"}
             };

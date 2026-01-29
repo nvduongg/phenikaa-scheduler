@@ -57,7 +57,7 @@ public class TimeTableValidator {
         }
 
         // 3d. Nếu có yêu cầu loại phòng cụ thể thì ép theo đó
-        // (VD môn PSC học phòng PC: requiredRoomType = LAB)
+        // (VD môn PSC học phòng PC: requiredRoomType = PC)
         if (!isOnline && requiredRoomType != null && !requiredRoomType.isEmpty()) {
             if (!room.getType().equalsIgnoreCase(requiredRoomType)) {
                 return false;
@@ -65,14 +65,17 @@ public class TimeTableValidator {
         }
 
         // 3e. Ràng buộc chi tiết theo loại lớp (chỉ áp dụng khi KHÔNG bị ép loại phòng)
-        // TH: bắt buộc Lab
+        // TH: bắt buộc Lab hoặc PC
         if ((requiredRoomType == null || requiredRoomType.isEmpty())
-                && "TH".equals(type) && !room.getType().equalsIgnoreCase("LAB")) {
+                && "TH".equals(type) 
+                && !room.getType().equalsIgnoreCase("LAB") 
+                && !room.getType().equalsIgnoreCase("PC")) {
             return false;
         }
-        // LT: không chiếm Lab (để dành cho TH) -> bỏ qua nếu bị ép LAB
+        // LT: không chiếm Lab/PC (để dành cho TH) -> bỏ qua nếu bị ép LAB/PC
         if ((requiredRoomType == null || requiredRoomType.isEmpty())
-                && "LT".equals(type) && room.getType().equalsIgnoreCase("LAB")) {
+                && "LT".equals(type) 
+                && (room.getType().equalsIgnoreCase("LAB") || room.getType().equalsIgnoreCase("PC"))) {
             return false;
         }
 

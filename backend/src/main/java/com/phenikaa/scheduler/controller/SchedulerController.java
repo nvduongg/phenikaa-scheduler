@@ -1,8 +1,8 @@
 package com.phenikaa.scheduler.controller;
 
-import com.phenikaa.scheduler.core.GeneticAlgorithm;
 import com.phenikaa.scheduler.model.Semester;
 import com.phenikaa.scheduler.repository.SemesterRepository;
+import com.phenikaa.scheduler.service.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -15,38 +15,36 @@ public class SchedulerController {
 
     private static final Logger log = LoggerFactory.getLogger(SchedulerController.class);
 
-    // Chỉ giữ lại Core GA, bỏ heuristicService
-    private final GeneticAlgorithm geneticAlgorithm;
     private final SemesterRepository semesterRepo;
+    private final SchedulerService schedulerService;
 
-    public SchedulerController(GeneticAlgorithm geneticAlgorithm, SemesterRepository semesterRepo) {
-        this.geneticAlgorithm = geneticAlgorithm;
+    public SchedulerController(SemesterRepository semesterRepo, SchedulerService schedulerService) {
         this.semesterRepo = semesterRepo;
+        this.schedulerService = schedulerService;
     }
 
     /**
      * API duy nhất để xếp lịch: Sử dụng Genetic Algorithm
      */
     @PostMapping("/generate")
-    public ResponseEntity<String> generateSchedule() {
+    public ResponseEntity<String> generateSchedule(@RequestParam(required = false) Long semesterId) {
         try {
-            // Lấy kỳ học hiện tại (Active Semester)
-            Semester currentSem = semesterRepo.findByIsCurrentTrue().orElse(null);
-            if (currentSem == null) {
-                return ResponseEntity.badRequest().body("Lỗi: Không tìm thấy học kỳ đang kích hoạt (Active Semester)!");
-            }
-
             long startTime = System.currentTimeMillis();
-            
-            // Chạy GA
-            String result = geneticAlgorithm.run(currentSem.getId());
-            
+
+            // Chạy GA (theo semesterId nếu được truyền vào)
+            String result = schedulerService.generateSchedule(semesterId);
+
             long duration = System.currentTimeMillis() - startTime;
-            
+
             // Format kết quả trả về cho đẹp
+            Semester semForMessage;
+            if (semesterId != null) semForMessage = semesterRepo.findById(semesterId).orElse(null);
+            else semForMessage = semesterRepo.findByIsCurrentTrue().orElse(null);
+
+            String semLabel = semForMessage != null ? semForMessage.getName() : (semesterId != null ? String.valueOf(semesterId) : "CURRENT");
             return ResponseEntity.ok(String.format(
-                "Xếp lịch hoàn tất cho kỳ: %s\nKết quả: %s\nThời gian chạy: %d ms", 
-                currentSem.getName(), result, duration
+                    "Xếp lịch hoàn tất cho kỳ: %s\nKết quả: %s\nThời gian chạy: %d ms",
+                    semLabel, result, duration
             ));
 
         } catch (Exception e) {

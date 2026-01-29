@@ -23,5 +23,5 @@ public class Room {
     private Integer capacity; // Sức chứa: 60, 40, 120...
 
     @Column(nullable = false)
-    private String type; // THEORY (Lý thuyết), LAB (Thực hành), HALL (Hội trường)
+    private String type; // THEORY (Lý thuyết), PC (Phòng máy tính), LAB (Thực hành/Thí nghiệm), HALL (Hội trường)
 }

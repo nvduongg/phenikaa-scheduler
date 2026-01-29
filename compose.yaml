@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: pk_scheduler_db
-    restart: always
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=admin
